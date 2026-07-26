@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -18,9 +19,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _rememberMe = true;
 
   void _handleLogin() async {
+    double? latitude;
+    double? longitude;
+
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 5),
+      );
+      latitude = position.latitude;
+      longitude = position.longitude;
+    } catch (_) {}
+
     final success = await ref.read(authProvider.notifier).login(
       _emailController.text,
       _passwordController.text,
+      latitude: latitude,
+      longitude: longitude,
     );
 
     if (success) {

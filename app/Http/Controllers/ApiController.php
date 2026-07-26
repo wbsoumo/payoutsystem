@@ -661,14 +661,49 @@ class ApiController extends Controller
         $user = \App\Models\MerchantUser::where('email', $request->email)->first();
 
         if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            \App\Models\LoginHistory::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'user_type' => 'merchant_user',
+                'user_id' => $user ? $user->id : null,
+                'email' => $request->email,
+                'latitude' => $request->latitude ?? null,
+                'longitude' => $request->longitude ?? null,
+                'ip_address' => $request->ip() ?? '127.0.0.1',
+                'browser' => $request->header('User-Agent'),
+                'status' => 'failed',
+            ]);
             return response()->json(['success' => false, 'error' => 'Invalid email or password.'], 401);
         }
 
         if ($user->status !== 'active') {
+            \App\Models\LoginHistory::create([
+                'id' => \Illuminate\Support\Str::uuid(),
+                'user_type' => 'merchant_user',
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'latitude' => $request->latitude ?? null,
+                'longitude' => $request->longitude ?? null,
+                'ip_address' => $request->ip() ?? '127.0.0.1',
+                'browser' => $request->header('User-Agent'),
+                'status' => 'failed',
+            ]);
             return response()->json(['success' => false, 'error' => 'Account is suspended.'], 403);
         }
 
         $merchant = $user->merchant;
+
+        // Insert successful login history
+        \App\Models\LoginHistory::create([
+            'id' => \Illuminate\Support\Str::uuid(),
+            'user_type' => 'merchant_user',
+            'user_id' => $user->id,
+            'email' => $user->email,
+            'latitude' => $request->latitude ?? null,
+            'longitude' => $request->longitude ?? null,
+            'ip_address' => $request->ip() ?? '127.0.0.1',
+            'browser' => $request->header('User-Agent'),
+            'status' => 'success',
+        ]);
 
         $key = 'nvx_pk_live_' . \Illuminate\Support\Str::random(32);
         $secret = 'nvx_sk_live_' . \Illuminate\Support\Str::random(48);

@@ -69,7 +69,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(String email, String password, {double? latitude, double? longitude}) async {
     state = state.copyWith(isLoading: true);
     
     try {
@@ -77,6 +77,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final response = await client.dio.post('/auth/login', data: {
         'email': email.trim(),
         'password': password,
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
       });
 
       if (response.data['success'] == true) {

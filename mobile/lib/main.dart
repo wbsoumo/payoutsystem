@@ -7,6 +7,7 @@ import 'core/theme/theme_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/pin_setup_screen.dart';
+import 'features/auth/presentation/screens/permission_check_screen.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/dashboard/presentation/screens/add_money_screen.dart';
 import 'features/dashboard/presentation/screens/notifications_screen.dart';
@@ -42,6 +43,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/splash',
       builder: (BuildContext context, GoRouterState state) => const SplashScreen(),
+    ),
+    GoRoute(
+      path: '/permission-check',
+      builder: (BuildContext context, GoRouterState state) => const PermissionCheckScreen(),
     ),
     GoRoute(
       path: '/login',

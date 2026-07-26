@@ -51,7 +51,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
         context.go('/dashboard');
       }
     } else {
-      context.go('/login');
+      context.go('/permission-check');
     }
   }
 
@@ -81,17 +81,22 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
                   width: 96,
                   height: 96,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3B82F6),
-                    borderRadius: BorderRadius.circular(32),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        color: Colors.black.withOpacity(0.1),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.flash_on, color: Colors.white, size: 54),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Image.asset(
+                      'assets/novexapay.png',
+                      fit: BoxFit.cover,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -101,7 +106,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
               child: Column(
                 children: [
                   Text(
-                    'Novexapay',
+                    'NovexaPay',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,

@@ -12,11 +12,11 @@ void main() {
       ),
     );
 
-    // Settle splash redirect delay
-    await tester.pumpAndSettle(const Duration(seconds: 3));
-
-    // Verify that login page elements exist
+    // Verify that splash screen elements exist immediately on load
     expect(find.text('NovexaPay'), findsOneWidget);
-    expect(find.text('Login Securely'), findsOneWidget);
+    expect(find.text('Powering Business Payouts Across India'), findsOneWidget);
+
+    // Drains splash timer so the test can finish without pending timers
+    await tester.pump(const Duration(seconds: 3));
   });
 }
