@@ -14,6 +14,6 @@ void main() {
 
     // Verify that login page elements exist
     expect(find.text('Novexapay'), findsOneWidget);
-    expect(find.text('Login securely'), findsOneWidget);
+    expect(find.text('Login Securely'), findsOneWidget);
   });
 }
