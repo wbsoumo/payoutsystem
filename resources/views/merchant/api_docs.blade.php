@@ -144,6 +144,77 @@
                 </button>
             </div>
         </div>
+
+        <!-- IP Whitelisting Card -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+            <div>
+                <h3 class="font-bold text-slate-900 text-lg">IP Whitelisting</h3>
+                <p class="text-xs text-slate-500">Secure your REST API access by restricting requests only to your trusted server IP addresses.</p>
+            </div>
+
+            <!-- Add IP Form -->
+            <form action="{{ route('merchant.api-keys.ip.add') }}" method="POST" class="flex flex-wrap items-end gap-4 max-w-2xl">
+                @csrf
+                <div class="space-y-1 flex-1 min-w-[200px]">
+                    <label for="ip_address" class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">IP Address</label>
+                    <input type="text" name="ip_address" id="ip_address" required placeholder="e.g. 192.168.1.1"
+                           class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                </div>
+                <div class="space-y-1 flex-1 min-w-[200px]">
+                    <label for="description" class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Description / Note</label>
+                    <input type="text" name="description" id="description" placeholder="e.g. Production server"
+                           class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                </div>
+                <button type="submit" class="h-11 px-6 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                    Add IP
+                </button>
+            </form>
+
+            <!-- IP Whitelist List -->
+            <div class="space-y-3">
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Whitelisted IP Addresses</span>
+                @forelse($merchant->ipWhitelists as $whitelist)
+                    <div class="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 flex justify-between items-center text-xs">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono font-bold text-slate-800">{{ $whitelist->ip_address }}</span>
+                                @if($whitelist->is_active)
+                                    <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-green-50 text-green-700 border border-green-200">Active</span>
+                                @else
+                                    <span class="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-slate-100 text-slate-500">Disabled</span>
+                                @endif
+                            </div>
+                            @if($whitelist->description)
+                                <p class="text-[10px] text-slate-400 font-medium">{{ $whitelist->description }}</p>
+                            @endif
+                        </div>
+
+                        <div class="flex gap-2">
+                            <!-- Toggle Active/Disable Form -->
+                            <form action="{{ route('merchant.api-keys.ip.toggle', $whitelist->id) }}" method="POST">
+                                @csrf
+                                <button type="submit" class="px-3 py-1.5 border border-slate-200 hover:bg-slate-100 rounded-lg font-bold text-[10px]">
+                                    {{ $whitelist->is_active ? 'Disable' : 'Enable' }}
+                                </button>
+                            </form>
+
+                            <!-- Delete Form -->
+                            <form action="{{ route('merchant.api-keys.ip.delete', $whitelist->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this whitelisted IP?')">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg font-bold text-[10px] border border-red-100">
+                                    Remove
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                @empty
+                    <div class="text-center py-6 text-slate-400 font-semibold text-xs border border-dashed border-slate-200 rounded-2xl">
+                        No IP restrictions configured. All connections are allowed.
+                    </div>
+                @endforelse
+            </div>
+        </div>
     </div>
 
     <!-- Code Docs Tab -->
