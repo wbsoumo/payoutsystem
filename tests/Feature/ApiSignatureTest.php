@@ -160,4 +160,28 @@ class ApiSignatureTest extends TestCase
             'id' => $beneficiaryId
         ]);
     }
+
+    public function test_get_notifications()
+    {
+        \App\Models\AuditLog::create([
+            'user_type' => 'merchant',
+            'user_id' => $this->merchant->id,
+            'merchant_id' => $this->merchant->id,
+            'action' => 'security_login',
+            'description' => 'Merchant logged in successfully.',
+            'ip_address' => '127.0.0.1',
+        ]);
+
+        $response = $this->withHeaders([
+            'x-api-key' => $this->apiKey,
+            'x-api-secret' => $this->secretKey,
+            'x-merchant-id' => $this->merchant->id,
+        ])->getJson('/api/v1/notifications');
+
+        $response->assertStatus(200)
+                 ->assertJsonFragment([
+                     'success' => true,
+                 ])
+                 ->assertJsonCount(1, 'notifications');
+    }
 }

@@ -514,4 +514,29 @@ class ApiController extends Controller
             'message' => 'Beneficiary deleted successfully.'
         ]);
     }
+
+    public function getNotifications(Request $request)
+    {
+        $merchant = $request->get('merchant');
+        
+        $logs = \App\Models\AuditLog::where('merchant_id', $merchant->id)
+            ->orWhereNull('merchant_id')
+            ->orderBy('created_at', 'desc')
+            ->limit(20)
+            ->get()
+            ->map(function ($l) {
+                return [
+                    'id' => $l->id,
+                    'title' => ucwords(str_replace('_', ' ', $l->action)),
+                    'body' => $l->description,
+                    'time' => $l->created_at ? $l->created_at->diffForHumans() : 'Just now',
+                    'type' => str_contains($l->action, 'security') || str_contains($l->action, 'pin') ? 'security' : 'info'
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'notifications' => $logs
+        ]);
+    }
 }

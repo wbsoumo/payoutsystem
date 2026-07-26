@@ -255,7 +255,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                   // Notification bell
                   GestureDetector(
-                    onTap: () => _showNotificationsDrawer(context),
+                    onTap: () => context.push('/notifications'),
                     child: Container(
                       width: 44,
                       height: 44,
