@@ -41,19 +41,41 @@ Route::group(['prefix' => 'merchant'], function () {
     // Portal Dashboard
     Route::group(['middleware' => 'merchant.auth'], function () {
         Route::get('/dashboard', [MerchantDashboardController::class, 'index'])->name('merchant.dashboard');
+        
+        // MAIN
+        Route::get('/payouts', [MerchantDashboardController::class, 'payouts'])->name('merchant.payouts');
+        Route::post('/payouts', [MerchantDashboardController::class, 'submitPayout'])->name('merchant.payouts.submit');
         Route::get('/ledger', [MerchantDashboardController::class, 'ledger'])->name('merchant.ledger');
-        
-        // Profile
-        Route::get('/profile', [MerchantDashboardController::class, 'profile'])->name('merchant.profile');
-        Route::post('/profile', [MerchantDashboardController::class, 'profileUpdate'])->name('merchant.profile.update');
-        Route::post('/profile/password', [MerchantDashboardController::class, 'changePassword'])->name('merchant.profile.password');
-        
-        // API Keys & Whitelist
-        Route::get('/api-keys', [MerchantDashboardController::class, 'apiKeys'])->name('merchant.api-keys');
+        Route::get('/settlements', [MerchantDashboardController::class, 'settlements'])->name('merchant.settlements');
+        Route::post('/settlements', [MerchantDashboardController::class, 'requestSettlement'])->name('merchant.settlements.request');
+
+        // PAYMENT SERVICES
+        Route::get('/collections', [MerchantDashboardController::class, 'collections'])->name('merchant.collections');
+        Route::get('/cc-to-bank', [MerchantDashboardController::class, 'ccToBank'])->name('merchant.cc-to-bank');
+        Route::post('/cc-to-bank', [MerchantDashboardController::class, 'processCcToBank'])->name('merchant.cc-to-bank.submit');
+        Route::get('/virtual-accounts', [MerchantDashboardController::class, 'virtualAccounts'])->name('merchant.virtual-accounts');
+        Route::get('/dynamic-qr', [MerchantDashboardController::class, 'dynamicQr'])->name('merchant.dynamic-qr');
+        Route::get('/payment-links', [MerchantDashboardController::class, 'paymentLinks'])->name('merchant.payment-links');
+        Route::post('/payment-links', [MerchantDashboardController::class, 'createPaymentLink'])->name('merchant.payment-links.submit');
+
+        // DEVELOPER
+        Route::get('/api-docs', [MerchantDashboardController::class, 'apiDocs'])->name('merchant.api-docs');
         Route::post('/api-keys/generate', [MerchantDashboardController::class, 'generateApiKeys'])->name('merchant.api-keys.generate');
         Route::post('/api-keys/ip', [MerchantDashboardController::class, 'addIpWhitelist'])->name('merchant.api-keys.ip.add');
         Route::delete('/api-keys/ip/{id}', [MerchantDashboardController::class, 'deleteIpWhitelist'])->name('merchant.api-keys.ip.delete');
         Route::post('/api-keys/ip/{id}/toggle', [MerchantDashboardController::class, 'toggleIpWhitelist'])->name('merchant.api-keys.ip.toggle');
+        Route::get('/webhooks', [MerchantDashboardController::class, 'webhooks'])->name('merchant.webhooks');
+        Route::post('/webhooks', [MerchantDashboardController::class, 'updateWebhooks'])->name('merchant.webhooks.update');
+
+        // ACCOUNT
+        Route::get('/profile', [MerchantDashboardController::class, 'profile'])->name('merchant.profile');
+        Route::post('/profile', [MerchantDashboardController::class, 'profileUpdate'])->name('merchant.profile.update');
+        Route::post('/profile/password', [MerchantDashboardController::class, 'changePassword'])->name('merchant.profile.password');
+        Route::get('/kyc', [MerchantDashboardController::class, 'kyc'])->name('merchant.kyc');
+        Route::post('/kyc', [MerchantDashboardController::class, 'uploadKyc'])->name('merchant.kyc.submit');
+        Route::get('/disputes', [MerchantDashboardController::class, 'disputes'])->name('merchant.disputes');
+        Route::get('/settings', [MerchantDashboardController::class, 'settings'])->name('merchant.settings');
+        Route::post('/settings', [MerchantDashboardController::class, 'updateSettings'])->name('merchant.settings.update');
 
         // Tickets
         Route::get('/tickets', [MerchantDashboardController::class, 'tickets'])->name('merchant.tickets');

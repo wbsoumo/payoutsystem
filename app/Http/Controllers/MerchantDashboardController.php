@@ -24,12 +24,18 @@ class MerchantDashboardController extends Controller
     protected ApiService $apiService;
     protected AuditLogService $auditLogService;
     protected WalletService $walletService;
+    protected \App\Services\CommissionService $commissionService;
 
-    public function __construct(ApiService $apiService, AuditLogService $auditLogService, WalletService $walletService)
-    {
+    public function __construct(
+        ApiService $apiService, 
+        AuditLogService $auditLogService, 
+        WalletService $walletService,
+        \App\Services\CommissionService $commissionService
+    ) {
         $this->apiService = $apiService;
         $this->auditLogService = $auditLogService;
         $this->walletService = $walletService;
+        $this->commissionService = $commissionService;
     }
 
     protected function getMerchant()
@@ -370,5 +376,434 @@ class MerchantDashboardController extends Controller
         ]);
 
         return back()->with('success', 'Reply posted successfully.');
+    }
+
+    // --- PAYOUTS ---
+    public function payouts()
+    {
+        $merchant = $this->getMerchant();
+        $payouts = Transaction::where('merchant_id', $merchant->id)
+            ->where('type', 'payout')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.payouts', compact('merchant', 'payouts'));
+    }
+
+    public function submitPayout(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'bank_name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:255',
+            'ifsc' => 'required|string|max:20',
+            'holder_name' => 'required|string|max:255',
+        ]);
+
+        $merchant = $this->getMerchant();
+        $amount = (float)$request->amount;
+
+        // Calculate commissions
+        $calc = $this->commissionService->calculate($merchant->id, $amount, 'bank_transfer');
+        $fee = $calc['fee'];
+        $gst = $calc['gst'];
+        $totalDebit = $amount + $fee + $gst;
+
+        if ($merchant->wallet->balance < $totalDebit) {
+            return back()->withErrors(['amount' => 'Insufficient wallet balance for this payout plus associated fees.'])->withInput();
+        }
+
+        // Deduct wallet balance
+        $this->walletService->debit($merchant->wallet->id, $totalDebit, 'payout_debit', "Payout of ₹{$amount} to {$request->account_number}. Fee: ₹{$fee}, GST: ₹{$gst}.");
+
+        // Log transaction
+        $txn = Transaction::create([
+            'merchant_id' => $merchant->id,
+            'reference_id' => 'TXN_' . strtoupper(Str::random(12)),
+            'type' => 'payout',
+            'amount' => $amount,
+            'fee' => $fee + $gst,
+            'status' => 'success',
+            'bank_name' => $request->bank_name,
+            'account_number' => $request->account_number,
+            'ifsc' => $request->ifsc,
+            'holder_name' => $request->holder_name,
+            'response_payload' => ['provider' => 'mock_gateway_api', 'status' => 'processed']
+        ]);
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'payout_initiated',
+            "Manual payout of ₹{$amount} initiated to account {$request->account_number}."
+        );
+
+        return back()->with('success', 'Payout processed successfully!');
+    }
+
+    // --- SETTLEMENTS ---
+    public function settlements()
+    {
+        $merchant = $this->getMerchant();
+        $settlements = \App\Models\MerchantSettlement::where('merchant_id', $merchant->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.settlements', compact('merchant', 'settlements'));
+    }
+
+    public function requestSettlement(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:100',
+        ]);
+
+        $merchant = $this->getMerchant();
+        $amount = (float)$request->amount;
+
+        // Settlements take 2% processing fee
+        $fee = $amount * 0.02;
+        $totalDebit = $amount + $fee;
+
+        if ($merchant->wallet->balance < $totalDebit) {
+            return back()->withErrors(['amount' => 'Insufficient wallet balance for this settlement request.'])->withInput();
+        }
+
+        // Deduct from wallet
+        $this->walletService->debit($merchant->wallet->id, $totalDebit, 'settlement_debit', "Settlement transfer request of ₹{$amount}. Fee: ₹{$fee}.");
+
+        // Record settlement
+        $settlement = \App\Models\MerchantSettlement::create([
+            'merchant_id' => $merchant->id,
+            'reference_id' => 'SETL_' . strtoupper(Str::random(12)),
+            'amount' => $amount,
+            'fee' => $fee,
+            'bank_name' => $merchant->profile->bank_name ?? 'Settlement Bank',
+            'account_number' => $merchant->profile->bank_account_number ?? '000000000',
+            'ifsc' => $merchant->profile->bank_ifsc ?? 'IFSC0000',
+            'status' => 'success',
+        ]);
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'settlement_requested',
+            "Requested settlement of ₹{$amount}."
+        );
+
+        return back()->with('success', 'Settlement completed successfully!');
+    }
+
+    // --- COLLECTION ACCOUNT ---
+    public function collections()
+    {
+        $merchant = $this->getMerchant();
+        
+        // Mock collection account details
+        $virtualAccount = [
+            'bank_name' => 'YES BANK LTD',
+            'account_number' => '222' . substr(str_replace('-', '', $merchant->id), 0, 10),
+            'ifsc' => 'YESB0CMSNOC',
+            'holder_name' => $merchant->company_name,
+        ];
+
+        // Fetch success transactions as mock collections
+        $collections = Transaction::where('merchant_id', $merchant->id)
+            ->where('type', 'collection')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.collections', compact('merchant', 'virtualAccount', 'collections'));
+    }
+
+    // --- CREDIT CARD TO BANK ---
+    public function ccToBank()
+    {
+        $merchant = $this->getMerchant();
+        $transfers = Transaction::where('merchant_id', $merchant->id)
+            ->where('type', 'cc_transfer')
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.cc_to_bank', compact('merchant', 'transfers'));
+    }
+
+    public function processCcToBank(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:500',
+            'card_number' => 'required|string|min:16',
+            'card_holder' => 'required|string|max:255',
+            'bank_name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:255',
+            'ifsc' => 'required|string|max:20',
+        ]);
+
+        $merchant = $this->getMerchant();
+        $amount = (float)$request->amount;
+
+        // Credit Card swiping takes 3% flat fee
+        $ccFee = $amount * 0.03;
+        $creditedAmount = $amount - $ccFee;
+
+        // Add to wallet balance first (simulated collection credit)
+        $this->walletService->credit($merchant->wallet->id, $creditedAmount, 'cc_payment_swipe', "CC swipe collection. Amount: ₹{$amount}, Fee: ₹{$ccFee}.");
+
+        // Immediately initiate Bank Payout from wallet
+        $calc = $this->commissionService->calculate($merchant->id, $creditedAmount, 'bank_transfer');
+        $payoutFee = $calc['fee'] + $calc['gst'];
+        
+        $payoutAmount = $creditedAmount - $payoutFee;
+
+        $this->walletService->debit($merchant->wallet->id, $creditedAmount, 'cc_payout_debit', "Payout CC transfer to {$request->account_number}.");
+
+        // Record payout transaction
+        Transaction::create([
+            'merchant_id' => $merchant->id,
+            'reference_id' => 'CC_' . strtoupper(Str::random(12)),
+            'type' => 'cc_transfer',
+            'amount' => $payoutAmount,
+            'fee' => $ccFee + $payoutFee,
+            'status' => 'success',
+            'bank_name' => $request->bank_name,
+            'account_number' => $request->account_number,
+            'ifsc' => $request->ifsc,
+            'holder_name' => $request->card_holder,
+            'response_payload' => ['card_swipe' => 'processed', 'status' => 'settled']
+        ]);
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'cc_to_bank_processed',
+            "Completed CC to Bank transfer of ₹{$payoutAmount}."
+        );
+
+        return back()->with('success', 'Credit card to Bank transfer processed and settled successfully!');
+    }
+
+    // --- VIRTUAL ACCOUNTS ---
+    public function virtualAccounts()
+    {
+        $merchant = $this->getMerchant();
+        
+        // Mock virtual accounts
+        $virtualAccounts = [
+            [
+                'customer_name' => 'John Doe Enterprises',
+                'account_number' => 'VA' . strtoupper(Str::random(8)),
+                'ifsc' => 'ICIC0000104',
+                'status' => 'active'
+            ],
+            [
+                'customer_name' => 'Acme Corp Pvt Ltd',
+                'account_number' => 'VA' . strtoupper(Str::random(8)),
+                'ifsc' => 'ICIC0000104',
+                'status' => 'active'
+            ]
+        ];
+
+        return view('merchant.virtual_accounts', compact('merchant', 'virtualAccounts'));
+    }
+
+    // --- DYNAMIC QR ---
+    public function dynamicQr()
+    {
+        $merchant = $this->getMerchant();
+        return view('merchant.dynamic_qr', compact('merchant'));
+    }
+
+    // --- PAYMENT LINKS ---
+    public function paymentLinks()
+    {
+        $merchant = $this->getMerchant();
+        $links = \App\Models\MerchantPaymentLink::where('merchant_id', $merchant->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.payment_links', compact('merchant', 'links'));
+    }
+
+    public function createPaymentLink(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'customer_name' => 'required|string|max:255',
+            'customer_email' => 'required|email|max:255',
+            'description' => 'required|string|max:255',
+        ]);
+
+        $merchant = $this->getMerchant();
+
+        $link = \App\Models\MerchantPaymentLink::create([
+            'merchant_id' => $merchant->id,
+            'reference_id' => 'PLNK_' . strtoupper(Str::random(12)),
+            'amount' => $request->amount,
+            'customer_name' => $request->customer_name,
+            'customer_email' => $request->customer_email,
+            'description' => $request->description,
+            'status' => 'pending'
+        ]);
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'payment_link_created',
+            "Generated payment link for customer: {$request->customer_email}."
+        );
+
+        return back()->with('success', 'Payment link created successfully!');
+    }
+
+    // --- DEVELOPER: API DOCS & WEBHOOKS ---
+    public function apiDocs()
+    {
+        $merchant = $this->getMerchant();
+        $keys = $merchant->apiKeys;
+
+        return view('merchant.api_docs', compact('merchant', 'keys'));
+    }
+
+    public function webhooks()
+    {
+        $merchant = $this->getMerchant();
+        $webhook = \App\Models\MerchantWebhook::where('merchant_id', $merchant->id)->first();
+        
+        $logs = \App\Models\ApiLog::where('merchant_id', $merchant->id)
+            ->where('uri', 'like', '%webhook%')
+            ->orderBy('created_at', 'desc')
+            ->take(10)
+            ->get();
+
+        return view('merchant.webhooks', compact('merchant', 'webhook', 'logs'));
+    }
+
+    public function updateWebhooks(Request $request)
+    {
+        $request->validate([
+            'url' => 'required|url',
+        ]);
+
+        $merchant = $this->getMerchant();
+        $webhook = \App\Models\MerchantWebhook::where('merchant_id', $merchant->id)->first();
+
+        if ($webhook) {
+            $webhook->update([
+                'url' => $request->url,
+                'is_active' => $request->has('is_active')
+            ]);
+        } else {
+            \App\Models\MerchantWebhook::create([
+                'merchant_id' => $merchant->id,
+                'url' => $request->url,
+                'secret_key' => 'whsec_' . Str::random(24),
+                'is_active' => true
+            ]);
+        }
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'webhook_updated',
+            "Updated webhook URL endpoint to {$request->url}."
+        );
+
+        return back()->with('success', 'Webhook configuration updated successfully.');
+    }
+
+    // --- ACCOUNT: KYC, DISPUTES, SETTINGS ---
+    public function kyc()
+    {
+        $merchant = $this->getMerchant();
+        $profile = $merchant->profile;
+
+        return view('merchant.kyc', compact('merchant', 'profile'));
+    }
+
+    public function uploadKyc(Request $request)
+    {
+        $request->validate([
+            'pan' => 'required|string|max:10',
+            'gst' => 'required|string|max:15',
+            'bank_name' => 'required|string|max:255',
+            'bank_account_number' => 'required|string|max:255',
+            'bank_ifsc' => 'required|string|max:20',
+            'kyc_doc' => 'required|file|mimes:pdf,jpg,png|max:5120',
+        ]);
+
+        $merchant = $this->getMerchant();
+
+        $path = $request->file('kyc_doc')->store('kyc_documents', 'public');
+
+        $profile = $merchant->profile;
+        if ($profile) {
+            $profile->update([
+                'pan' => strtoupper($request->pan),
+                'gst' => strtoupper($request->gst),
+                'bank_name' => $request->bank_name,
+                'bank_account_number' => $request->bank_account_number,
+                'bank_ifsc' => strtoupper($request->bank_ifsc),
+                'kyc_document_path' => $path,
+            ]);
+        } else {
+            \App\Models\MerchantProfile::create([
+                'merchant_id' => $merchant->id,
+                'pan' => strtoupper($request->pan),
+                'gst' => strtoupper($request->gst),
+                'bank_name' => $request->bank_name,
+                'bank_account_number' => $request->bank_account_number,
+                'bank_ifsc' => strtoupper($request->bank_ifsc),
+                'kyc_document_path' => $path,
+            ]);
+        }
+
+        $merchant->update(['kyc_status' => 'submitted']);
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'kyc_uploaded',
+            "Uploaded KYC compliance documentation."
+        );
+
+        return back()->with('success', 'KYC compliance documents uploaded successfully!');
+    }
+
+    public function disputes()
+    {
+        $merchant = $this->getMerchant();
+        $disputes = \App\Models\MerchantDispute::where('merchant_id', $merchant->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('merchant.disputes', compact('merchant', 'disputes'));
+    }
+
+    public function settings()
+    {
+        $merchant = $this->getMerchant();
+        return view('merchant.settings', compact('merchant'));
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $request->validate([
+            'business_name' => 'required|string|max:255',
+            'business_type' => 'required|string|max:255',
+        ]);
+
+        $merchant = $this->getMerchant();
+        $merchant->update([
+            'business_name' => $request->business_name,
+            'business_type' => $request->business_type,
+        ]);
+
+        return back()->with('success', 'Merchant settings updated successfully.');
     }
 }
