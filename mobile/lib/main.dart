@@ -16,8 +16,12 @@ import 'features/settings/presentation/screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  await Hive.openBox('beneficiaries_box');
+  try {
+    await Hive.initFlutter();
+    await Hive.openBox('beneficiaries_box');
+  } catch (e) {
+    print('Hive initialization failed: $e');
+  }
 
   runApp(
     const ProviderScope(
