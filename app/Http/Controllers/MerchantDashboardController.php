@@ -202,19 +202,13 @@ class MerchantDashboardController extends Controller
 
     public function generateApiKeys(Request $request)
     {
-        // 2FA Ready simulation: requires user verification or password confirmation
         $request->validate([
             'password' => 'required',
-            'otp_code' => 'required|string|max:6', // Mock OTP logic
         ]);
 
         $user = Auth::guard('merchant')->user();
         if (!Hash::check($request->password, $user->password)) {
             return back()->withErrors(['password' => 'Invalid password confirmation.']);
-        }
-
-        if ($request->otp_code !== '123456') { // Mock valid OTP
-            return back()->withErrors(['otp_code' => 'Invalid or expired OTP code. Use 123456 for testing.']);
         }
 
         $keys = $this->apiService->generateKeys($user->merchant_id, $request->input('key_name', 'Production Key'));

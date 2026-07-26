@@ -146,7 +146,7 @@ $signature = hash_hmac('sha256', $payload, $secretKey);
                 </div>
 
                 <p class="text-xs text-slate-500 leading-relaxed">
-                    Security confirmation: Generating new production API secrets will immediately deactivate your current keys. Confirm your password and verify the OTP code.
+                    Security confirmation: Generating new production API secrets will immediately deactivate your current keys. Confirm your password to proceed.
                 </p>
 
                 <form action="{{ route('merchant.api-keys.generate') }}" method="POST" class="space-y-4">
@@ -157,13 +157,6 @@ $signature = hash_hmac('sha256', $payload, $secretKey);
                         <label for="modal_password" class="text-[10px] font-bold text-slate-500 uppercase">Confirm Login Password</label>
                         <input type="password" name="password" id="modal_password" required placeholder="••••••••"
                                class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
-                    </div>
-
-                    <div class="space-y-1">
-                        <label for="modal_otp" class="text-[10px] font-bold text-slate-500 uppercase">Verification OTP (Email OTP)</label>
-                        <input type="text" name="otp_code" id="modal_otp" placeholder="123456" required
-                               class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs text-center font-mono font-bold focus:outline-none focus:border-blue-500 bg-slate-50/50">
-                        <span class="text-[9px] text-slate-400 block mt-0.5">Use OTP code: <code class="font-bold">123456</code></span>
                     </div>
 
                     <div class="flex gap-3 pt-2">
