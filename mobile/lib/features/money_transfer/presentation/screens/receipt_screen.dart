@@ -28,6 +28,10 @@ class ReceiptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Transaction Receipt', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
@@ -42,17 +46,13 @@ class ReceiptScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Success Header Indicator
+            // Animated Success Header Indicator
             Center(
               child: Column(
                 children: [
-                  const CircleAvatar(
-                    radius: 36,
-                    backgroundColor: Color(0xFFDCFCE7),
-                    child: Icon(Icons.check, color: Colors.green, size: 36),
-                  ),
+                  const AnimatedCheckmark(),
                   const SizedBox(height: 16),
-                  const Text('Payout Transfer Successful', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text('Payout Transfer Successful', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
                   const SizedBox(height: 4),
                   Text('Ref: $referenceId', style: const TextStyle(fontSize: 11, color: Colors.grey)),
                 ],
@@ -60,25 +60,27 @@ class ReceiptScreen extends StatelessWidget {
             ),
             const SizedBox(height: 36),
 
-            // Receipt Parameters Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
+            // Serrated Ticket Card
+            ClipPath(
+              clipper: TicketClipper(),
+              child: Container(
+                color: cardColor,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
                 child: Column(
                   children: [
-                    ReceiptRow(label: 'Beneficiary Name', value: beneficiary),
+                    ReceiptRow(label: 'Beneficiary Name', value: beneficiary, textColor: textColor),
                     const Divider(height: 24),
-                    ReceiptRow(label: 'Destination Bank', value: 'State Bank of India'),
+                    ReceiptRow(label: 'Destination Bank', value: 'State Bank of India', textColor: textColor),
                     const Divider(height: 24),
-                    ReceiptRow(label: 'Account Number', value: '••••••••4556'),
+                    ReceiptRow(label: 'Account Number', value: '••••••••4556', textColor: textColor),
                     const Divider(height: 24),
-                    ReceiptRow(label: 'Transfer Amount', value: '₹$amount', isBold: true),
+                    ReceiptRow(label: 'Transfer Amount', value: '₹$amount', isBold: true, textColor: textColor),
                     const Divider(height: 24),
-                    const ReceiptRow(label: 'Convenience Charge', value: '₹5.00'),
+                    ReceiptRow(label: 'Convenience Charge', value: '₹5.00', textColor: textColor),
                     const Divider(height: 24),
-                    const ReceiptRow(label: 'Commission Earned', value: '₹1.25', valueColor: Colors.green),
+                    ReceiptRow(label: 'Commission Earned', value: '₹1.25', valueColor: Colors.green, textColor: textColor),
                     const Divider(height: 24),
-                    ReceiptRow(label: 'Timestamp', value: DateTime.now().toString().substring(0, 16)),
+                    ReceiptRow(label: 'Timestamp', value: DateTime.now().toString().substring(0, 16), textColor: textColor),
                   ],
                 ),
               ),
@@ -103,7 +105,7 @@ class ReceiptScreen extends StatelessWidget {
                   child: ElevatedButton(
                     onPressed: () => context.go('/dashboard'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4361EE),
+                      backgroundColor: const Color(0xFF7C3AED),
                       foregroundColor: Colors.white,
                       minimumSize: const Size.fromHeight(50),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -120,11 +122,76 @@ class ReceiptScreen extends StatelessWidget {
   }
 }
 
+class AnimatedCheckmark extends StatefulWidget {
+  const AnimatedCheckmark({Key? key}) : super(key: key);
+
+  @override
+  State<AnimatedCheckmark> createState() => _AnimatedCheckmarkState();
+}
+
+class _AnimatedCheckmarkState extends State<AnimatedCheckmark> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _checkAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+    _checkAnimation = CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _checkAnimation,
+      child: const CircleAvatar(
+        radius: 36,
+        backgroundColor: Color(0xFFDCFCE7),
+        child: Icon(Icons.check, color: Colors.green, size: 36),
+      ),
+    );
+  }
+}
+
+class TicketClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height);
+
+    double x = 0;
+    double y = size.height;
+    double width = size.width;
+    double serrationSize = 8.0;
+
+    while (x < width) {
+      path.lineTo(x + serrationSize / 2, y - serrationSize);
+      path.lineTo(x + serrationSize, y);
+      x += serrationSize;
+    }
+
+    path.lineTo(width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
 class ReceiptRow extends StatelessWidget {
   final String label;
   final String value;
   final bool isBold;
   final Color? valueColor;
+  final Color textColor;
 
   const ReceiptRow({
     Key? key,
@@ -132,6 +199,7 @@ class ReceiptRow extends StatelessWidget {
     required this.value,
     this.isBold = false,
     this.valueColor,
+    required this.textColor,
   }) : super(key: key);
 
   @override
@@ -139,13 +207,13 @@ class ReceiptRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: Colors.black54)),
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
         Text(
           value,
           style: TextStyle(
             fontSize: 12,
             fontWeight: isBold ? FontWeight.w800 : FontWeight.bold,
-            color: valueColor ?? Colors.black87,
+            color: valueColor ?? textColor,
           ),
         ),
       ],

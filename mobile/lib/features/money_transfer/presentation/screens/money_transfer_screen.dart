@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
@@ -260,60 +261,140 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
       return;
     }
 
-    // Show secure Transaction PIN modal confirmation
+    // Show secure Transaction PIN modal confirmation with custom numeric keypad
+    String enteredPin = '';
+    String validationError = '';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('Enter Transaction PIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-              const SizedBox(height: 8),
-              const Text('Enter your 6-digit secure PIN to authorize this transfer.', style: TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
-              const SizedBox(height: 24),
-              TextField(
-                controller: _pinController,
-                obscureText: true,
-                keyboardType: TextInputType.number,
-                maxLength: 6,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 24, letterSpacing: 16, fontWeight: FontWeight.bold),
-                decoration: const InputDecoration(
-                  counterText: '',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                  hintText: '••••••',
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () async {
-                  final pin = _pinController.text;
-                  final isValid = await ref.read(authProvider.notifier).verifyPin(pin);
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
+            void handleKeyPress(String key) async {
+              if (enteredPin.length < 6) {
+                HapticFeedback.mediumImpact();
+                setModalState(() {
+                  enteredPin += key;
+                  validationError = '';
+                });
+
+                if (enteredPin.length == 6) {
+                  // Trigger validation automatically
+                  final isValid = await ref.read(authProvider.notifier).verifyPin(enteredPin);
                   if (isValid) {
-                    Navigator.pop(context); // Close sheet
+                    Navigator.pop(context); // Close bottom sheet
                     _processPayout(amount);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Invalid Transaction PIN! Please try again.'), backgroundColor: Colors.red),
-                    );
+                    HapticFeedback.vibrate();
+                    setModalState(() {
+                      enteredPin = '';
+                      validationError = 'Incorrect PIN! Please try again.';
+                    });
                   }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4361EE),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(50),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Authorize Transfer', style: TextStyle(fontWeight: FontWeight.bold)),
+                }
+              }
+            }
+
+            void handleBackspace() {
+              if (enteredPin.isNotEmpty) {
+                HapticFeedback.lightImpact();
+                setModalState(() {
+                  enteredPin = enteredPin.substring(0, enteredPin.length - 1);
+                  validationError = '';
+                });
+              }
+            }
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text('Enter Transaction PIN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor), textAlign: TextAlign.center),
+                  const SizedBox(height: 8),
+                  Text('Enter your 6-digit secure PIN to authorize transfer of ₹${amount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+                  const SizedBox(height: 28),
+
+                  // Pin visual indicators (6 circles)
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(6, (index) {
+                      final isFilled = index < enteredPin.length;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isFilled ? const Color(0xFF7C3AED) : Colors.transparent,
+                          border: Border.all(color: isFilled ? const Color(0xFF7C3AED) : Colors.grey.shade400, width: 2),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+                  if (validationError.isNotEmpty)
+                    Text(validationError, style: const TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+                  const SizedBox(height: 28),
+
+                  // Grid Custom Keypad
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Column(
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: ['1', '2', '3'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: ['4', '5', '6'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: ['7', '8', '9'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            const SizedBox(width: 64, height: 64), // Empty space for layout balance
+                            KeypadButton(label: '0', onTap: () => handleKeyPress('0')),
+                            IconButton(
+                              icon: const Icon(Icons.backspace_outlined, size: 24, color: Colors.grey),
+                              onPressed: handleBackspace,
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(64, 64),
+                                shape: const CircleBorder(),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -459,6 +540,45 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
               child: const Text('Continue to PIN Validation', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class KeypadButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const KeypadButton({
+    Key? key,
+    required this.label,
+    required this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(40),
+      child: Container(
+        width: 68,
+        height: 68,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: isDark ? const Color(0xFF1E2235) : Colors.grey.shade100,
+          border: Border.all(color: isDark ? const Color(0xFF2E3245) : Colors.grey.shade200),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white : const Color(0xFF1E293B),
+          ),
         ),
       ),
     );

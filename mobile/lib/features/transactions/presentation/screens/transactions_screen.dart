@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({Key? key}) : super(key: key);
@@ -13,21 +14,42 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
     {'ref': 'TXN178923012', 'beneficiary': 'Sanjay Singh', 'amount': '₹2,500.00', 'status': 'pending', 'date': 'Today, 11:05'},
     {'ref': 'TXN178923013', 'beneficiary': 'Priya Sharma', 'amount': '₹1,200.00', 'status': 'failed', 'date': 'Yesterday, 17:35'},
   ];
+  
   String _selectedStatus = 'all';
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTransactions();
+  }
+
+  Future<void> _loadTransactions() async {
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   void _showTransactionDetails(Map<String, dynamic> txn) {
     showDialog(
       context: context,
       builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
         return AlertDialog(
-          title: Text(txn['ref'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(txn['ref'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(title: const Text('Beneficiary'), subtitle: Text(txn['beneficiary'])),
-              ListTile(title: const Text('Amount'), subtitle: Text(txn['amount'])),
-              ListTile(title: const Text('Status'), subtitle: Text(txn['status'].toString().toUpperCase())),
-              ListTile(title: const Text('Timestamp'), subtitle: Text(txn['date'])),
+              ListTile(contentPadding: EdgeInsets.zero, title: const Text('Beneficiary', style: TextStyle(fontSize: 12)), subtitle: Text(txn['beneficiary'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor))),
+              ListTile(contentPadding: EdgeInsets.zero, title: const Text('Amount', style: TextStyle(fontSize: 12)), subtitle: Text(txn['amount'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor))),
+              ListTile(contentPadding: EdgeInsets.zero, title: const Text('Status', style: TextStyle(fontSize: 12)), subtitle: Text(txn['status'].toString().toUpperCase(), style: TextStyle(fontWeight: FontWeight.bold, color: textColor))),
+              ListTile(contentPadding: EdgeInsets.zero, title: const Text('Timestamp', style: TextStyle(fontSize: 12)), subtitle: Text(txn['date'], style: TextStyle(fontWeight: FontWeight.bold, color: textColor))),
             ],
           ),
           actions: [
@@ -45,10 +67,14 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
       return t['status'] == _selectedStatus;
     }).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Payout Transaction History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         child: Column(
           children: [
             // Filter chips
@@ -63,78 +89,106 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
                 FilterChip(
                   label: const Text('Success'),
                   selected: _selectedStatus == 'success',
-                  onSelected: (val) => setState(() => _selectedStatus = 'success'),
+                  onSelected: (val) => setState(() => _selectedStatus == 'success'),
                 ),
                 FilterChip(
                   label: const Text('Pending'),
                   selected: _selectedStatus == 'pending',
-                  onSelected: (val) => setState(() => _selectedStatus = 'pending'),
+                  onSelected: (val) => setState(() => _selectedStatus == 'pending'),
                 ),
                 FilterChip(
                   label: const Text('Failed'),
                   selected: _selectedStatus == 'failed',
-                  onSelected: (val) => setState(() => _selectedStatus = 'failed'),
+                  onSelected: (val) => setState(() => _selectedStatus == 'failed'),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             Expanded(
-              child: ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (context, index) {
-                  final t = filtered[index];
-                  final isSuccess = t['status'] == 'success';
-                  final isPending = t['status'] == 'pending';
-
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: isSuccess
-                            ? const Color(0xFFDCFCE7)
-                            : isPending
-                                ? const Color(0xFFFEF3C7)
-                                : const Color(0xFFFEE2E2),
-                        child: Icon(
-                          isSuccess
-                              ? Icons.check
-                              : isPending
-                                  ? Icons.access_time
-                                  : Icons.close,
-                          color: isSuccess
-                              ? Colors.green
-                              : isPending
-                                  ? Colors.amber
-                                  : Colors.red,
-                          size: 18,
-                        ),
-                      ),
-                      title: Text(t['beneficiary'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: Text('${t['ref']} • ${t['date']}', style: const TextStyle(fontSize: 10)),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(t['amount'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          Text(
-                            t['status'].toString().toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: isSuccess
-                                  ? Colors.green
-                                  : isPending
-                                      ? Colors.amber
-                                      : Colors.red,
+              child: _isLoading
+                  ? ListView.separated(
+                      itemCount: 4,
+                      separatorBuilder: (c, i) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        return Shimmer.fromColors(
+                          baseColor: isDark ? const Color(0xFF1E2235) : Colors.grey.shade300,
+                          highlightColor: isDark ? const Color(0xFF2E3245) : Colors.grey.shade100,
+                          child: Container(
+                            height: 72,
+                            decoration: BoxDecoration(
+                              color: cardColor,
+                              borderRadius: BorderRadius.circular(20),
                             ),
                           ),
-                        ],
-                      ),
-                      onTap: () => _showTransactionDetails(t),
+                        );
+                      },
+                    )
+                  : ListView.separated(
+                      itemCount: filtered.length,
+                      separatorBuilder: (c, i) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final t = filtered[index];
+                        final isSuccess = t['status'] == 'success';
+                        final isPending = t['status'] == 'pending';
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: cardColor,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+                          ),
+                          child: ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: isSuccess
+                                  ? const Color(0xFFDCFCE7)
+                                  : isPending
+                                      ? const Color(0xFFFEF3C7)
+                                      : const Color(0xFFFEE2E2),
+                              child: Icon(
+                                isSuccess
+                                    ? Icons.check
+                                    : isPending
+                                        ? Icons.access_time
+                                        : Icons.close,
+                                color: isSuccess
+                                    ? Colors.green
+                                    : isPending
+                                        ? Colors.amber
+                                        : Colors.red,
+                                size: 18,
+                              ),
+                            ),
+                            title: Text(t['beneficiary'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                            subtitle: Text('${t['ref']} • ${t['date']}', style: const TextStyle(fontSize: 10)),
+                            trailing: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(t['amount'], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  t['status'].toString().toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: isSuccess
+                                        ? Colors.green
+                                        : isPending
+                                            ? Colors.amber
+                                            : Colors.red,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            onTap: () => _showTransactionDetails(t),
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),
