@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@yield('title') - Merchant Portal</title>
+    
+    <!-- Premium Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 antialiased font-sans min-h-screen flex">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between flex-shrink-0 border-r border-slate-800">
+        <div class="p-6 space-y-8">
+            <!-- Logo -->
+            <a href="{{ route('merchant.dashboard') }}" class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <i class="fa-solid fa-feather-pointed text-white text-sm"></i>
+                </div>
+                <span class="text-lg font-bold font-display tracking-tight text-white">Novexa<span class="text-blue-500">pay</span></span>
+            </a>
+
+            <!-- Navigation Links -->
+            <nav class="space-y-1">
+                <a href="{{ route('merchant.dashboard') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('merchant.dashboard') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
+                </a>
+                
+                <a href="{{ route('merchant.ledger') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('merchant.ledger') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-solid fa-receipt w-5"></i> Wallet Ledger
+                </a>
+
+                <a href="{{ route('merchant.api-keys') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('merchant.api-keys') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-solid fa-key w-5"></i> API & Whitelists
+                </a>
+
+                <a href="{{ route('merchant.tickets') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('merchant.tickets*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-regular fa-life-ring w-5"></i> Help & Support
+                </a>
+
+                <a href="{{ route('merchant.profile') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('merchant.profile') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-regular fa-user w-5"></i> Profile Settings
+                </a>
+            </nav>
+        </div>
+
+        <!-- Logged user / Logout -->
+        <div class="p-6 border-t border-slate-800 space-y-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-white uppercase">
+                    {{ substr(Auth::guard('merchant')->user()->name, 0, 2) }}
+                </div>
+                <div class="overflow-hidden">
+                    <div class="text-sm font-bold text-white truncate">{{ Auth::guard('merchant')->user()->name }}</div>
+                    <div class="text-xs text-slate-500 truncate">{{ Auth::guard('merchant')->user()->merchant->company_name }}</div>
+                </div>
+            </div>
+            
+            <form action="{{ route('merchant.logout') }}" method="POST">
+                @csrf
+                <button type="submit" class="w-full h-10 border border-slate-800 hover:border-slate-700 hover:text-white rounded-xl flex items-center justify-center gap-2 text-xs font-bold transition-all">
+                    Sign Out <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main Working Panel -->
+    <div class="flex-grow flex flex-col min-w-0">
+        <!-- Top Navigation / Header -->
+        <header class="h-20 border-b border-slate-200 bg-white flex items-center justify-between px-8">
+            <div class="flex items-center gap-2 text-slate-500 text-sm font-medium">
+                <span>Portal</span>
+                <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                <span class="text-slate-800 font-bold">@yield('page_title')</span>
+            </div>
+
+            <!-- Wallet Stats Badge -->
+            <div class="flex items-center gap-4">
+                <div class="px-4 py-2 border border-slate-200 rounded-2xl bg-slate-50 flex items-center gap-3">
+                    <span class="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-sm animate-pulse"></span>
+                    <div>
+                        <span class="text-[10px] text-slate-400 font-bold block leading-none">WALLET BALANCE</span>
+                        <span class="text-sm font-extrabold text-slate-900 font-display">₹{{ number_format(Auth::guard('merchant')->user()->merchant->wallet->balance, 2) }}</span>
+                    </div>
+                </div>
+
+                <!-- KYC Status indicator -->
+                @php
+                    $kyc = Auth::guard('merchant')->user()->merchant->kyc_status;
+                @endphp
+                @if($kyc === 'approved')
+                    <span class="px-3 py-1 bg-green-50 border border-green-200 rounded-xl text-green-700 text-xs font-bold uppercase"><i class="fa-solid fa-circle-check mr-1"></i> KYC Active</span>
+                @elseif($kyc === 'submitted')
+                    <span class="px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-xs font-bold uppercase"><i class="fa-solid fa-clock mr-1"></i> KYC Pending Approval</span>
+                @else
+                    <span class="px-3 py-1 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-bold uppercase"><i class="fa-solid fa-circle-exclamation mr-1"></i> Submit KYC Documents</span>
+                @endif
+            </div>
+        </header>
+
+        <!-- Main Panel Body -->
+        <main class="flex-grow p-8 overflow-y-auto">
+            @if(session('success'))
+                <div class="mb-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-2xl text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-circle-check"></i> {{ session('success') }}
+                </div>
+            @endif
+
+            @yield('content')
+        </main>
+    </div>
+
+</body>
+</html>
