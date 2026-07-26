@@ -452,12 +452,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ),
                     ),
                     // Quick Send Beneficiaries mapped from provider
-                    ...beneficiaries.take(5).map((b) => AvatarSendItem(
-                      name: b['name']!.split(' ').first,
-                      logoUrl: b['logo'],
-                      bankName: b['bank'] ?? '',
-                      onTap: () => context.push('/transfer?beneficiary_name=${Uri.encodeComponent(b['name']!)}'),
-                    )),
+                    ...beneficiaries.take(5).map((b) {
+                      final name = b['name'] ?? 'N/A';
+                      final firstName = name.isNotEmpty ? name.split(' ').first : 'N/A';
+                      return AvatarSendItem(
+                        name: firstName,
+                        logoUrl: b['logo'],
+                        bankName: b['bank'] ?? '',
+                        onTap: () => context.push('/transfer?beneficiary_name=${Uri.encodeComponent(name)}'),
+                      );
+                    }),
                   ],
                 ),
               ),
