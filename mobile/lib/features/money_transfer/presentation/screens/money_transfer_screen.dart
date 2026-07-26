@@ -13,9 +13,123 @@ class MoneyTransferScreen extends ConsumerStatefulWidget {
 class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   final _amountController = TextEditingController();
   final _pinController = TextEditingController();
+
+  final List<Map<String, String>> _beneficiaries = [
+    {'name': 'Vijay Kumar', 'bank': 'State Bank of India', 'account': '••••4556', 'ifsc': 'SBIN0004556'},
+    {'name': 'Sanjay Singh', 'bank': 'HDFC Bank', 'account': '••••8990', 'ifsc': 'HDFC0001020'},
+    {'name': 'Priya Sharma', 'bank': 'ICICI Bank', 'account': '••••1122', 'ifsc': 'ICIC0000045'},
+  ];
+
+  late Map<String, String> _selectedBeneficiaryData;
   String _selectedBeneficiary = 'Vijay Kumar';
   double _chargeRate = 5.00;
   double _commissionRate = 1.25;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedBeneficiaryData = _beneficiaries.first;
+  }
+
+  void _showAddBeneficiarySheet() {
+    final nameController = TextEditingController();
+    final bankController = TextEditingController();
+    final accountController = TextEditingController();
+    final ifscController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Add New Beneficiary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Holder Name', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: bankController, decoration: const InputDecoration(labelText: 'Bank Name', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: accountController, decoration: const InputDecoration(labelText: 'Account Number', border: OutlineInputBorder())),
+              const SizedBox(height: 12),
+              TextField(controller: ifscController, decoration: const InputDecoration(labelText: 'IFSC Code', border: OutlineInputBorder())),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  if (nameController.text.isNotEmpty && accountController.text.isNotEmpty) {
+                    final newBen = {
+                      'name': nameController.text,
+                      'bank': bankController.text.isEmpty ? 'Generic Bank' : bankController.text,
+                      'account': '••••' + accountController.text.substring(accountController.text.length - 4),
+                      'ifsc': ifscController.text.toUpperCase(),
+                    };
+                    setState(() {
+                      _beneficiaries.add(newBen);
+                      _selectedBeneficiaryData = newBen;
+                      _selectedBeneficiary = newBen['name']!;
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4361EE),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Save & Select', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSelectBeneficiarySheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Select Beneficiary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _beneficiaries.length,
+                  itemBuilder: (context, index) {
+                    final b = _beneficiaries[index];
+                    return ListTile(
+                      leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.person, color: Color(0xFF4361EE))),
+                      title: Text(b['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                      subtitle: Text('${b['bank']} • ${b['account']}', style: const TextStyle(fontSize: 10)),
+                      onTap: () {
+                        setState(() {
+                          _selectedBeneficiaryData = b;
+                          _selectedBeneficiary = b['name']!;
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   void _confirmTransfer() {
     if (_amountController.text.isEmpty) {
@@ -119,17 +233,26 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Beneficiary Selection card
-            const Text('SELECT BENEFICIARY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('SELECT BENEFICIARY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                TextButton.icon(
+                  icon: const Icon(Icons.add, size: 14),
+                  label: const Text('Add New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: _showAddBeneficiarySheet,
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             Card(
               child: ListTile(
                 leading: const CircleAvatar(backgroundColor: Color(0xFFEFF6FF), child: Icon(Icons.person, color: Color(0xFF4361EE))),
-                title: Text(_selectedBeneficiary, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: const Text('State Bank of India • ••••4556', style: TextStyle(fontSize: 11)),
+                title: Text(_selectedBeneficiaryData['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text('${_selectedBeneficiaryData['bank']} • ${_selectedBeneficiaryData['account']}', style: const TextStyle(fontSize: 11)),
                 trailing: const Icon(Icons.arrow_drop_down),
-                onTap: () {
-                  // Option to swap beneficiary
-                },
+                onTap: _showSelectBeneficiarySheet,
               ),
             ),
             const SizedBox(height: 24),
