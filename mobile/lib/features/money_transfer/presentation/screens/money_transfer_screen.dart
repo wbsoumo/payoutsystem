@@ -195,11 +195,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                   itemBuilder: (context, index) {
                     final b = beneficiaries[index];
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFEFF6FF),
-                        backgroundImage: b['logo'] != null ? NetworkImage(b['logo']!) : null,
-                        child: b['logo'] == null ? const Icon(Icons.person, color: Color(0xFF4361EE)) : null,
-                      ),
+                      leading: SafeBankLogo(logoUrl: b['logo'], bankName: b['bank'] ?? ''),
                       title: Text(b['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       subtitle: Text('${b['bank']} • ${b['account']}', style: const TextStyle(fontSize: 10)),
                       onTap: () {
@@ -455,11 +451,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
             if (_selectedBeneficiaryData != null)
               Card(
                 child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: const Color(0xFFEFF6FF),
-                    backgroundImage: _selectedBeneficiaryData!['logo'] != null ? NetworkImage(_selectedBeneficiaryData!['logo']!) : null,
-                    child: _selectedBeneficiaryData!['logo'] == null ? const Icon(Icons.person, color: Color(0xFF4361EE)) : null,
-                  ),
+                  leading: SafeBankLogo(logoUrl: _selectedBeneficiaryData!['logo'], bankName: _selectedBeneficiaryData!['bank'] ?? ''),
                   title: Text(_selectedBeneficiaryData!['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   subtitle: Text('${_selectedBeneficiaryData!['bank']} • ${_selectedBeneficiaryData!['account']}', style: const TextStyle(fontSize: 11)),
                   trailing: const Icon(Icons.arrow_drop_down),
@@ -601,6 +593,69 @@ class KeypadButton extends StatelessWidget {
             fontWeight: FontWeight.w600,
             color: isDark ? Colors.white : const Color(0xFF1E293B),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class SafeBankLogo extends StatelessWidget {
+  final String? logoUrl;
+  final String bankName;
+  final double size;
+
+  const SafeBankLogo({
+    Key? key,
+    required this.logoUrl,
+    required this.bankName,
+    this.size = 48,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (logoUrl == null || logoUrl!.isEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEFF6FF),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Icon(Icons.person, color: Color(0xFF4361EE), size: 20),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFF6FF),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: Image.network(
+          logoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            final uri = Uri.tryParse(logoUrl!);
+            final domain = uri != null && uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'generic-bank.com';
+            
+            return Image.network(
+              'https://logo.clearbit.com/$domain',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error2, stackTrace2) {
+                return const Center(
+                  child: Icon(Icons.business, color: Color(0xFF4361EE), size: 20),
+                );
+              },
+            );
+          },
         ),
       ),
     );

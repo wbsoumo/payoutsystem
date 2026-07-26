@@ -273,12 +273,7 @@ class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
                     ),
                     child: ListTile(
                       contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                        radius: 24,
-                        backgroundColor: const Color(0xFFEFF6FF),
-                        backgroundImage: b['logo'] != null ? NetworkImage(b['logo']!) : null,
-                        child: b['logo'] == null ? const Icon(Icons.person, color: Color(0xFF4361EE)) : null,
-                      ),
+                      leading: SafeBankLogo(logoUrl: b['logo'], bankName: b['bank'] ?? ''),
                       title: Text(b['name']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor)),
                       subtitle: Padding(
                         padding: const EdgeInsets.only(top: 4),
@@ -296,6 +291,69 @@ class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class SafeBankLogo extends StatelessWidget {
+  final String? logoUrl;
+  final String bankName;
+  final double size;
+
+  const SafeBankLogo({
+    Key? key,
+    required this.logoUrl,
+    required this.bankName,
+    this.size = 48,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (logoUrl == null || logoUrl!.isEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEFF6FF),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Icon(Icons.person, color: Color(0xFF4361EE), size: 20),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFF6FF),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: Image.network(
+          logoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            final uri = Uri.tryParse(logoUrl!);
+            final domain = uri != null && uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'generic-bank.com';
+            
+            return Image.network(
+              'https://logo.clearbit.com/$domain',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error2, stackTrace2) {
+                return const Center(
+                  child: Icon(Icons.business, color: Color(0xFF4361EE), size: 20),
+                );
+              },
+            );
+          },
         ),
       ),
     );
