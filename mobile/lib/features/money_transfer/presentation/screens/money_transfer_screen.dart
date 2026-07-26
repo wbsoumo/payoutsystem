@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../beneficiaries/presentation/providers/beneficiary_provider.dart';
 
 class MoneyTransferScreen extends ConsumerStatefulWidget {
   const MoneyTransferScreen({Key? key}) : super(key: key);
@@ -15,30 +16,6 @@ class MoneyTransferScreen extends ConsumerStatefulWidget {
 class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   final _amountController = TextEditingController();
   final _pinController = TextEditingController();
-
-  final List<Map<String, String>> _beneficiaries = [
-    {
-      'name': 'Vijay Kumar',
-      'bank': 'State Bank of India',
-      'account': '••••4556',
-      'ifsc': 'SBIN0004556',
-      'logo': 'https://logo.clearbit.com/sbi.co.in'
-    },
-    {
-      'name': 'Sanjay Singh',
-      'bank': 'HDFC Bank',
-      'account': '••••8990',
-      'ifsc': 'HDFC0001020',
-      'logo': 'https://logo.clearbit.com/hdfcbank.com'
-    },
-    {
-      'name': 'Priya Sharma',
-      'bank': 'ICICI Bank',
-      'account': '••••1122',
-      'ifsc': 'ICIC0000045',
-      'logo': 'https://logo.clearbit.com/icicibank.com'
-    },
-  ];
 
   final Map<String, String> _bankDomains = {
     'SBIN': 'sbi.co.in',
@@ -54,16 +31,10 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
     'IDIB': 'indianbank.in',
   };
 
-  late Map<String, String> _selectedBeneficiaryData;
+  Map<String, String>? _selectedBeneficiaryData;
   String _selectedBeneficiary = 'Vijay Kumar';
   double _chargeRate = 5.00;
   double _commissionRate = 1.25;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedBeneficiaryData = _beneficiaries.first;
-  }
 
   void _showAddBeneficiarySheet() {
     final nameController = TextEditingController();
@@ -175,8 +146,8 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                           'ifsc': ifscController.text.toUpperCase(),
                           'logo': resolvedLogo.isNotEmpty ? resolvedLogo : 'https://logo.clearbit.com/generic-bank.com',
                         };
+                        ref.read(beneficiaryProvider.notifier).addBeneficiary(newBen);
                         setState(() {
-                          _beneficiaries.add(newBen);
                           _selectedBeneficiaryData = newBen;
                           _selectedBeneficiary = newBen['name']!;
                         });
@@ -201,6 +172,8 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   }
 
   void _showSelectBeneficiarySheet() {
+    final beneficiaries = ref.read(beneficiaryProvider);
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -216,9 +189,9 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
               Expanded(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: _beneficiaries.length,
+                  itemCount: beneficiaries.length,
                   itemBuilder: (context, index) {
-                    final b = _beneficiaries[index];
+                    final b = beneficiaries[index];
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: const Color(0xFFEFF6FF),
@@ -419,6 +392,12 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final beneficiaries = ref.watch(beneficiaryProvider);
+    if (_selectedBeneficiaryData == null && beneficiaries.isNotEmpty) {
+      _selectedBeneficiaryData = beneficiaries.first;
+      _selectedBeneficiary = beneficiaries.first['name']!;
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('New Money Transfer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
       body: SingleChildScrollView(
@@ -440,19 +419,29 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Card(
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: const Color(0xFFEFF6FF),
-                  backgroundImage: _selectedBeneficiaryData['logo'] != null ? NetworkImage(_selectedBeneficiaryData['logo']!) : null,
-                  child: _selectedBeneficiaryData['logo'] == null ? const Icon(Icons.person, color: Color(0xFF4361EE)) : null,
+            if (_selectedBeneficiaryData != null)
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    backgroundImage: _selectedBeneficiaryData!['logo'] != null ? NetworkImage(_selectedBeneficiaryData!['logo']!) : null,
+                    child: _selectedBeneficiaryData!['logo'] == null ? const Icon(Icons.person, color: Color(0xFF4361EE)) : null,
+                  ),
+                  title: Text(_selectedBeneficiaryData!['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                  subtitle: Text('${_selectedBeneficiaryData!['bank']} • ${_selectedBeneficiaryData!['account']}', style: const TextStyle(fontSize: 11)),
+                  trailing: const Icon(Icons.arrow_drop_down),
+                  onTap: _showSelectBeneficiarySheet,
                 ),
-                title: Text(_selectedBeneficiaryData['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('${_selectedBeneficiaryData['bank']} • ${_selectedBeneficiaryData['account']}', style: const TextStyle(fontSize: 11)),
-                trailing: const Icon(Icons.arrow_drop_down),
-                onTap: _showSelectBeneficiarySheet,
+              )
+            else
+              Card(
+                child: ListTile(
+                  leading: const CircleAvatar(backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.person_add, color: Colors.grey)),
+                  title: const Text('No Beneficiary Selected', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
+                  subtitle: const Text('Tap "Add New" above to configure', style: TextStyle(fontSize: 11)),
+                  onTap: _showAddBeneficiarySheet,
+                ),
               ),
-            ),
             const SizedBox(height: 24),
 
             // Amount input Card

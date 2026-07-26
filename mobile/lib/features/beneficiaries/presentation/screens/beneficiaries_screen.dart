@@ -1,38 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
+import '../providers/beneficiary_provider.dart';
 
-class BeneficiariesScreen extends StatefulWidget {
+class BeneficiariesScreen extends ConsumerStatefulWidget {
   const BeneficiariesScreen({Key? key}) : super(key: key);
 
   @override
-  State<BeneficiariesScreen> createState() => _BeneficiariesScreenState();
+  ConsumerState<BeneficiariesScreen> createState() => _BeneficiariesScreenState();
 }
 
-class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
-  final List<Map<String, String>> _beneficiaries = [
-    {
-      'name': 'Vijay Kumar',
-      'bank': 'State Bank of India',
-      'account': '••••4556',
-      'ifsc': 'SBIN0004556',
-      'logo': 'https://logo.clearbit.com/sbi.co.in'
-    },
-    {
-      'name': 'Sanjay Singh',
-      'bank': 'HDFC Bank',
-      'account': '••••8990',
-      'ifsc': 'HDFC0001020',
-      'logo': 'https://logo.clearbit.com/hdfcbank.com'
-    },
-    {
-      'name': 'Priya Sharma',
-      'bank': 'ICICI Bank',
-      'account': '••••1122',
-      'ifsc': 'ICIC0000045',
-      'logo': 'https://logo.clearbit.com/icicibank.com'
-    },
-  ];
-
+class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
   final Map<String, String> _bankDomains = {
     'SBIN': 'sbi.co.in',
     'HDFC': 'hdfcbank.com',
@@ -208,15 +186,15 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
                   ElevatedButton(
                     onPressed: () {
                       if (nameController.text.isNotEmpty && accountController.text.isNotEmpty && bankController.text.isNotEmpty) {
-                        setState(() {
-                          _beneficiaries.add({
-                            'name': nameController.text,
-                            'bank': bankController.text,
-                            'account': '••••' + accountController.text.substring(accountController.text.length - 4),
-                            'ifsc': ifscController.text.toUpperCase(),
-                            'logo': resolvedLogo.isNotEmpty ? resolvedLogo : 'https://logo.clearbit.com/generic-bank.com',
-                          });
-                        });
+                        final newBen = {
+                          'name': nameController.text,
+                          'bank': bankController.text,
+                          'account': '••••' + accountController.text.substring(accountController.text.length - 4),
+                          'ifsc': ifscController.text.toUpperCase(),
+                          'logo': resolvedLogo.isNotEmpty ? resolvedLogo : 'https://logo.clearbit.com/generic-bank.com',
+                        };
+                        
+                        ref.read(beneficiaryProvider.notifier).addBeneficiary(newBen);
                         Navigator.pop(context);
                       }
                     },
@@ -240,7 +218,8 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filtered = _beneficiaries.where((b) {
+    final beneficiaries = ref.watch(beneficiaryProvider);
+    final filtered = beneficiaries.where((b) {
       return b['name']!.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           b['bank']!.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
@@ -307,9 +286,7 @@ class _BeneficiariesScreenState extends State<BeneficiariesScreen> {
                       trailing: IconButton(
                         icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
                         onPressed: () {
-                          setState(() {
-                            _beneficiaries.remove(b);
-                          });
+                          ref.read(beneficiaryProvider.notifier).removeBeneficiary(b);
                         },
                       ),
                     ),

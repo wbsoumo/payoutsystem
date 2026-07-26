@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
@@ -13,7 +14,11 @@ import 'features/ledger/presentation/screens/ledger_screen.dart';
 import 'features/transactions/presentation/screens/transactions_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Hive.initFlutter();
+  await Hive.openBox('beneficiaries_box');
+
   runApp(
     const ProviderScope(
       child: MyApp(),
