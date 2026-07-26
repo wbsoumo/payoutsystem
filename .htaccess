@@ -3,6 +3,9 @@
     
     # Route the homepage request directly to the index.php file
     RewriteRule ^$ public/index.php [L]
+
+    # Route migration runner directly to public folder
+    RewriteRule ^run_migration.php$ public/run_migration.php [L]
     
     # Route all other requests to index.php if the file or folder doesn't exist
     RewriteCond %{REQUEST_FILENAME} !-f
