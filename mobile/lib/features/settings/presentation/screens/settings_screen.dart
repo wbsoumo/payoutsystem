@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/theme/theme_provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text('System Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
       body: ListView(
@@ -39,8 +44,10 @@ class SettingsScreen extends StatelessWidget {
               children: [
                 SwitchListTile(
                   title: const Text('Dark Mode Display', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  value: false,
-                  onChanged: (val) {},
+                  value: isDark,
+                  onChanged: (val) {
+                    ref.read(themeProvider.notifier).toggleTheme(val);
+                  },
                 ),
               ],
             ),
