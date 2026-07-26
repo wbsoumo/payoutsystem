@@ -81,55 +81,6 @@
                 <button type="button" @click="showPasswordModal = true" class="px-4 h-10 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs transition-colors shadow-sm">
                     Generate New Production Keys
                 </button>
-
-                <!-- Password Confirmation Modal -->
-                <div x-show="showPasswordModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
-                    <!-- Backdrop -->
-                    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showPasswordModal = false"></div>
-
-                    <!-- Modal Wrapper -->
-                    <div class="flex min-h-full items-center justify-center p-4">
-                        <div class="relative transform overflow-hidden rounded-3xl bg-white p-6 text-left shadow-2xl border border-slate-100 transition-all w-full max-w-md space-y-6">
-                            
-                            <div class="flex justify-between items-center">
-                                <h3 class="text-lg font-bold text-slate-900">Verify Account Password</h3>
-                                <button type="button" @click="showPasswordModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
-                            </div>
-
-                            <p class="text-xs text-slate-500 leading-relaxed">
-                                Security confirmation: Generating new production API secrets will immediately deactivate your current keys. Confirm your password and verify the OTP code.
-                            </p>
-
-                            <form action="{{ route('merchant.api-keys.generate') }}" method="POST" class="space-y-4">
-                                @csrf
-                                <input type="hidden" name="key_name" value="Production Key">
-
-                                <div class="space-y-1">
-                                    <label for="modal_password" class="text-[10px] font-bold text-slate-500 uppercase">Confirm Login Password</label>
-                                    <input type="password" name="password" id="modal_password" required placeholder="••••••••"
-                                           class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
-                                </div>
-
-                                <div class="space-y-1">
-                                    <label for="modal_otp" class="text-[10px] font-bold text-slate-500 uppercase">Verification OTP (Email OTP)</label>
-                                    <input type="text" name="otp_code" id="modal_otp" placeholder="123456" required
-                                           class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs text-center font-mono font-bold focus:outline-none focus:border-blue-500 bg-slate-50/50">
-                                    <span class="text-[9px] text-slate-400 block mt-0.5">Use OTP code: <code class="font-bold">123456</code></span>
-                                </div>
-
-                                <div class="flex gap-3 pt-2">
-                                    <button type="button" @click="showPasswordModal = false" class="flex-1 h-11 border border-slate-200 hover:bg-slate-50 font-bold rounded-lg text-xs transition-colors">
-                                        Cancel
-                                    </button>
-                                    <button type="submit" class="flex-1 h-11 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-red-500/10 transition-colors">
-                                        Re-generate Keys
-                                    </button>
-                                </div>
-                            </form>
-
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -179,5 +130,55 @@ $signature = hash_hmac('sha256', $payload, $secretKey);
             </div>
         </div>
     </div>
+
+    <!-- Password Confirmation Modal (Moved to Root Level to prevent container clipping) -->
+    <div x-show="showPasswordModal" class="fixed inset-0 z-50 overflow-y-auto" style="display: none;">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" @click="showPasswordModal = false"></div>
+
+        <!-- Modal Wrapper -->
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative transform overflow-hidden rounded-3xl bg-white p-6 text-left shadow-2xl border border-slate-100 transition-all w-full max-w-md space-y-6">
+                
+                <div class="flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-slate-900">Verify Account Password</h3>
+                    <button type="button" @click="showPasswordModal = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <p class="text-xs text-slate-500 leading-relaxed">
+                    Security confirmation: Generating new production API secrets will immediately deactivate your current keys. Confirm your password and verify the OTP code.
+                </p>
+
+                <form action="{{ route('merchant.api-keys.generate') }}" method="POST" class="space-y-4">
+                    @csrf
+                    <input type="hidden" name="key_name" value="Production Key">
+
+                    <div class="space-y-1">
+                        <label for="modal_password" class="text-[10px] font-bold text-slate-500 uppercase">Confirm Login Password</label>
+                        <input type="password" name="password" id="modal_password" required placeholder="••••••••"
+                               class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label for="modal_otp" class="text-[10px] font-bold text-slate-500 uppercase">Verification OTP (Email OTP)</label>
+                        <input type="text" name="otp_code" id="modal_otp" placeholder="123456" required
+                               class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs text-center font-mono font-bold focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                        <span class="text-[9px] text-slate-400 block mt-0.5">Use OTP code: <code class="font-bold">123456</code></span>
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" @click="showPasswordModal = false" class="flex-1 h-11 border border-slate-200 hover:bg-slate-50 font-bold rounded-lg text-xs transition-colors">
+                            Cancel
+                        </button>
+                        <button type="submit" class="flex-1 h-11 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-red-500/10 transition-colors">
+                            Re-generate Keys
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
 </div>
 @endsection
