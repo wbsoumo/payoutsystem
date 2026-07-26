@@ -33,6 +33,17 @@
             <form action="{{ route('merchant.payouts.submit') }}" method="POST" class="space-y-4">
                 @csrf
                 <div class="space-y-1">
+                    <label for="choose_beneficiary" class="text-[10px] font-bold text-slate-500 uppercase">Choose Saved Beneficiary (Optional)</label>
+                    <select id="choose_beneficiary" class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-semibold text-slate-800">
+                        <option value="">-- Select Saved Beneficiary --</option>
+                        @foreach($beneficiaries as $ben)
+                            <option value="{{ $ben->id }}" data-name="{{ $ben->name }}" data-bank="{{ $ben->bank_name }}" data-ifsc="{{ $ben->ifsc }}" data-account="{{ $ben->account_number }}">
+                                {{ $ben->name }} ({{ $ben->bank_name }} - {{ substr($ben->account_number, -4) }})
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="space-y-1">
                     <label for="amount" class="text-[10px] font-bold text-slate-500 uppercase">Transfer Amount (INR)</label>
                     <input type="number" name="amount" id="amount" step="0.01" min="1" placeholder="₹0.00" required
                            class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-bold">
@@ -116,4 +127,20 @@
         </div>
     </div>
 </div>
+<script>
+    document.getElementById('choose_beneficiary').addEventListener('change', function() {
+        const option = this.options[this.selectedIndex];
+        if (option.value) {
+            document.getElementById('holder_name').value = option.getAttribute('data-name');
+            document.getElementById('bank_name').value = option.getAttribute('data-bank');
+            document.getElementById('ifsc').value = option.getAttribute('data-ifsc');
+            document.getElementById('account_number').value = option.getAttribute('data-account');
+        } else {
+            document.getElementById('holder_name').value = '';
+            document.getElementById('bank_name').value = '';
+            document.getElementById('ifsc').value = '';
+            document.getElementById('account_number').value = '';
+        }
+    });
+</script>
 @endsection

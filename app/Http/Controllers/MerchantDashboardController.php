@@ -436,8 +436,9 @@ class MerchantDashboardController extends Controller
             ->where('type', 'payout')
             ->orderBy('created_at', 'desc')
             ->paginate(10);
+        $beneficiaries = $merchant->beneficiaries()->orderBy('name', 'asc')->get();
 
-        return view('merchant.payouts', compact('merchant', 'payouts'));
+        return view('merchant.payouts', compact('merchant', 'payouts', 'beneficiaries'));
     }
 
     public function submitPayout(Request $request)
