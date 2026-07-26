@@ -41,3 +41,4 @@ flutter:
   # Register onboarding/assets if any
   assets:
     - assets/lottie/
+    - assets/novexapay.png

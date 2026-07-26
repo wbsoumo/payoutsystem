@@ -113,26 +113,31 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   // Main logo & titles
                   Column(
                     children: [
-                      // Lightning squircle logo
+                      // Lightning squircle logo replaced with official NovexaPay logo
                       Container(
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6),
-                          borderRadius: BorderRadius.circular(22),
+                          borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B82F6).withOpacity(0.3),
+                              color: Colors.black.withOpacity(0.08),
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
                           ],
                         ),
-                        child: const Icon(Icons.flash_on, color: Colors.white, size: 36),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.asset(
+                            'assets/novexapay.png',
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text(
-                        'Novexapay',
+                        'NovexaPay',
                         style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.w900,

@@ -121,7 +121,7 @@ class MyApp extends ConsumerWidget {
     final themeMode = ref.watch(themeProvider);
 
     return MaterialApp.router(
-      title: 'Novexapay Mobile Merchant Portal',
+      title: 'NovexaPay Mobile Merchant Portal',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,
