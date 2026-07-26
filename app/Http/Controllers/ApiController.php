@@ -14,11 +14,16 @@ class ApiController extends Controller
 {
     protected WalletService $walletService;
     protected CommissionService $commissionService;
+    protected \App\Services\JioPayService $jioPayService;
 
-    public function __construct(WalletService $walletService, CommissionService $commissionService)
-    {
+    public function __construct(
+        WalletService $walletService, 
+        CommissionService $commissionService,
+        \App\Services\JioPayService $jioPayService
+    ) {
         $this->walletService = $walletService;
         $this->commissionService = $commissionService;
+        $this->jioPayService = $jioPayService;
     }
 
     public function getBalance(Request $request)
@@ -135,30 +140,27 @@ class ApiController extends Controller
             return $txn;
         });
 
-        // 4. Simulate Upstream Provider (Mock gateway processing)
-        usleep(50000); // 50ms delay
-        $providerRef = 'ref_prov_' . Str::random(12);
+        // 4. Dispatch Upstream Provider (Jiopay Production API)
+        $jioResult = $this->jioPayService->transfer([
+            'order_id' => $referenceId,
+            'beneficiary_name' => $validated['bank_holder_name'],
+            'account_number' => $validated['bank_account_number'],
+            'ifsc' => $validated['bank_ifsc'],
+            'amount' => $amount,
+        ]);
+
+        $status = $jioResult['status'] === 'success' ? 'success' : 'failed';
+        $providerRef = $jioResult['provider_reference_id'] ?? null;
+        $failureReason = $jioResult['status'] === 'failed' ? $jioResult['message'] : null;
         $responseTimeMs = (int) ((microtime(true) - $startTime) * 1000);
 
-        // Success / Fail rule simulation based on amount limits
-        $status = 'success';
-        $failureReason = null;
-        if ($amount > 5000000) { // e.g. mock velocity rule: decline payouts > 50L
-            $status = 'failed';
-            $failureReason = 'Amount exceeds transaction velocity limit';
-        }
-
         // 5. Update Transaction status and credit back wallet if failed
-        DB::transaction(function () use ($transaction, $status, $providerRef, $responseTimeMs, $failureReason, $totalDebitAmount, $merchant, $referenceId) {
+        DB::transaction(function () use ($transaction, $status, $providerRef, $responseTimeMs, $failureReason, $totalDebitAmount, $merchant, $referenceId, $jioResult) {
             $transaction->update([
                 'status' => $status,
                 'provider_reference_id' => $providerRef,
                 'response_time_ms' => $responseTimeMs,
-                'api_response_payload' => [
-                    'provider_status' => $status,
-                    'provider_reference' => $providerRef,
-                    'error_reason' => $failureReason,
-                ],
+                'api_response_payload' => $jioResult['response'] ?? [],
             ]);
 
             if ($status === 'failed') {

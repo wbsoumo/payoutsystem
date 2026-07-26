@@ -71,6 +71,11 @@
                    class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.logs.api') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
                     <i class="fa-solid fa-receipt w-5"></i> API Gateway Logs
                 </a>
+
+                <a href="{{ route('admin.settings') }}" 
+                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.settings*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                    <i class="fa-solid fa-gear w-5"></i> System Settings
+                </a>
             </nav>
         </div>
 

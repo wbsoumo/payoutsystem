@@ -25,17 +25,20 @@ class MerchantDashboardController extends Controller
     protected AuditLogService $auditLogService;
     protected WalletService $walletService;
     protected \App\Services\CommissionService $commissionService;
+    protected \App\Services\JioPayService $jioPayService;
 
     public function __construct(
         ApiService $apiService, 
         AuditLogService $auditLogService, 
         WalletService $walletService,
-        \App\Services\CommissionService $commissionService
+        \App\Services\CommissionService $commissionService,
+        \App\Services\JioPayService $jioPayService
     ) {
         $this->apiService = $apiService;
         $this->auditLogService = $auditLogService;
         $this->walletService = $walletService;
         $this->commissionService = $commissionService;
+        $this->jioPayService = $jioPayService;
     }
 
     protected function getMerchant()
@@ -413,23 +416,45 @@ class MerchantDashboardController extends Controller
             return back()->withErrors(['amount' => 'Insufficient wallet balance for this payout plus associated fees.'])->withInput();
         }
 
+        $referenceId = 'TXN_' . strtoupper(Str::random(12));
+
         // Deduct wallet balance
         $this->walletService->debit($merchant->wallet->id, $totalDebit, 'payout_debit', "Payout of ₹{$amount} to {$request->account_number}. Fee: ₹{$fee}, GST: ₹{$gst}.");
+
+        // Dispatch JioPay Upstream
+        $jioResult = $this->jioPayService->transfer([
+            'order_id' => $referenceId,
+            'beneficiary_name' => $request->holder_name,
+            'account_number' => $request->account_number,
+            'ifsc' => $request->ifsc,
+            'amount' => $amount,
+        ]);
+
+        $status = $jioResult['status'] === 'success' ? 'success' : 'failed';
+        $providerRef = $jioResult['provider_reference_id'] ?? null;
+        $failureReason = $jioResult['status'] === 'failed' ? $jioResult['message'] : null;
 
         // Log transaction
         $txn = Transaction::create([
             'merchant_id' => $merchant->id,
-            'reference_id' => 'TXN_' . strtoupper(Str::random(12)),
+            'reference_id' => $referenceId,
             'type' => 'payout',
             'amount' => $amount,
             'fee' => $fee + $gst,
-            'status' => 'success',
+            'status' => $status,
             'bank_name' => $request->bank_name,
             'account_number' => $request->account_number,
             'ifsc' => $request->ifsc,
             'holder_name' => $request->holder_name,
-            'response_payload' => ['provider' => 'mock_gateway_api', 'status' => 'processed']
+            'provider_reference_id' => $providerRef,
+            'response_payload' => $jioResult['response'] ?? []
         ]);
+
+        if ($status === 'failed') {
+            // Return funds back to merchant
+            $this->walletService->credit($merchant->wallet->id, $totalDebit, 'refund', "Reversal payout failed: {$referenceId}");
+            return back()->withErrors(['amount' => "Payout declined by Jiopay provider: {$failureReason}"])->withInput();
+        }
 
         $this->auditLogService->log(
             'merchant_user',

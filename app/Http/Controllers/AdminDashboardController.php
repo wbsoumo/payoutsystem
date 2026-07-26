@@ -352,4 +352,36 @@ class AdminDashboardController extends Controller
 
         return back()->with('success', 'Merchant user password reset successfully.');
     }
+
+    public function settings()
+    {
+        $admin = $this->getAdmin();
+        $settings = \App\Models\Setting::all()->pluck('value', 'key');
+        return view('admin.settings', compact('admin', 'settings'));
+    }
+
+    public function settingsUpdate(Request $request)
+    {
+        $request->validate([
+            'jiopay_mid' => 'required|string',
+            'jiopay_key' => 'required|string',
+            'jiopay_entity_id' => 'required|string',
+            'jiopay_customer_id' => 'required|string',
+        ]);
+
+        \App\Models\Setting::set('jiopay_mid', $request->jiopay_mid);
+        \App\Models\Setting::set('jiopay_key', $request->jiopay_key);
+        \App\Models\Setting::set('jiopay_entity_id', $request->jiopay_entity_id);
+        \App\Models\Setting::set('jiopay_customer_id', $request->jiopay_customer_id);
+
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            null,
+            'system_settings_update',
+            "Updated Jiopay gateway upstream credentials."
+        );
+
+        return back()->with('success', 'Upstream gateway configurations updated successfully.');
+    }
 }

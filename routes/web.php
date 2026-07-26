@@ -12,6 +12,11 @@ use App\Http\Controllers\AdminDashboardController;
 | Public Website Routes
 |--------------------------------------------------------------------------
 */
+// Subdomain Routing for doc.taskbazi.xyz
+Route::domain('doc.taskbazi.xyz')->group(function () {
+    Route::get('/', [PublicController::class, 'docs'])->name('subdomain.docs');
+});
+
 Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/features', [PublicController::class, 'features'])->name('features');
 Route::get('/pricing', [PublicController::class, 'pricing'])->name('pricing');
@@ -126,5 +131,9 @@ Route::group(['prefix' => 'admin'], function () {
         // System Logs
         Route::get('/logs/audit', [AdminDashboardController::class, 'auditLogs'])->name('admin.logs.audit');
         Route::get('/logs/api', [AdminDashboardController::class, 'apiLogs'])->name('admin.logs.api');
+
+        // System Settings
+        Route::get('/settings', [AdminDashboardController::class, 'settings'])->name('admin.settings');
+        Route::post('/settings', [AdminDashboardController::class, 'settingsUpdate'])->name('admin.settings.update');
     });
 });
