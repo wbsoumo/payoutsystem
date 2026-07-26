@@ -407,7 +407,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   Row(
                     children: [
                       GestureDetector(
-                        onTap: () => _showProfileMenu(context),
+                        onTap: () => context.push('/profile'),
                         child: const CircleAvatar(
                           radius: 22,
                           backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),
