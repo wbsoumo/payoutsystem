@@ -386,4 +386,56 @@ class AdminDashboardController extends Controller
 
         return back()->with('success', 'Upstream gateway configurations updated successfully.');
     }
+
+    public function merchantProfileUpdate(Request $request, string $id)
+    {
+        $request->validate([
+            'company_name' => 'required|string|max:255',
+            'business_name' => 'required|string|max:255',
+            'business_type' => 'required|string|max:255',
+            'pan' => 'required|string|max:10',
+            'gst' => 'required|string|max:15',
+            'bank_name' => 'required|string|max:255',
+            'bank_account_number' => 'required|string|max:255',
+            'bank_ifsc' => 'required|string|max:20',
+        ]);
+
+        $merchant = Merchant::findOrFail($id);
+        
+        $merchant->update([
+            'company_name' => $request->company_name,
+            'business_name' => $request->business_name,
+            'business_type' => $request->business_type,
+        ]);
+
+        $profile = $merchant->profile;
+        if ($profile) {
+            $profile->update([
+                'pan' => strtoupper($request->pan),
+                'gst' => strtoupper($request->gst),
+                'bank_name' => $request->bank_name,
+                'bank_account_number' => $request->bank_account_number,
+                'bank_ifsc' => strtoupper($request->bank_ifsc),
+            ]);
+        } else {
+            \App\Models\MerchantProfile::create([
+                'merchant_id' => $merchant->id,
+                'pan' => strtoupper($request->pan),
+                'gst' => strtoupper($request->gst),
+                'bank_name' => $request->bank_name,
+                'bank_account_number' => $request->bank_account_number,
+                'bank_ifsc' => strtoupper($request->bank_ifsc),
+            ]);
+        }
+
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            $merchant->id,
+            'merchant_profile_update',
+            "Admin updated merchant profile details and bank accounts."
+        );
+
+        return back()->with('success', 'Merchant profile configurations updated successfully.');
+    }
 }

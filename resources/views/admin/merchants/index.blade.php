@@ -53,8 +53,9 @@
                             </td>
                             <td class="px-6 py-4">{{ $merchant->created_at->format('Y-m-d') }}</td>
                             <td class="px-6 py-4 text-right">
-                                <a href="{{ route('admin.merchants.view', $merchant->id) }}" class="text-slate-400 hover:text-blue-600 text-sm">
-                                    <i class="fa-solid fa-chevron-right"></i>
+                                <a href="{{ route('admin.merchants.view', $merchant->id) }}" 
+                                   class="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 font-bold rounded-lg transition-all text-[10px] uppercase shadow-sm inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-eye"></i> View Profile
                                 </a>
                             </td>
                         </tr>

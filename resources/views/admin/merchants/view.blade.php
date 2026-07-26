@@ -73,10 +73,15 @@
         <div class="lg:col-span-8 space-y-6">
             
             <!-- Profile Info Card -->
-            <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
-                <h3 class="font-bold text-slate-900 text-lg">Identity details</h3>
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4" x-data="{ showEditForm: false }">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-slate-900 text-lg">Identity & Bank Profile</h3>
+                    <button type="button" @click="showEditForm = !showEditForm" class="px-3 py-1 border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold rounded-lg text-[10px] uppercase transition-colors">
+                        <i class="fa-solid fa-pen-to-square mr-1"></i> Edit Profile
+                    </button>
+                </div>
                 
-                <div class="grid md:grid-cols-2 gap-4 text-xs">
+                <div class="grid md:grid-cols-2 gap-4 text-xs" x-show="!showEditForm">
                     <div>
                         <span class="text-slate-400 font-bold block">PAN CARD</span>
                         <span class="font-mono text-sm font-bold text-slate-800 uppercase">{{ $merchant->profile->pan ?? 'Not submitted' }}</span>
@@ -104,6 +109,68 @@
                         @endif
                     </div>
                 </div>
+
+                <form action="{{ route('admin.merchants.profile.update', $merchant->id) }}" method="POST" x-show="showEditForm" class="space-y-4 text-xs font-semibold" style="display: none;">
+                    @csrf
+                    
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Company Name</label>
+                            <input type="text" name="company_name" value="{{ $merchant->company_name }}" required
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Brand Name</label>
+                            <input type="text" name="business_name" value="{{ $merchant->business_name }}" required
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Business Entity Type</label>
+                            <input type="text" name="business_type" value="{{ $merchant->business_type }}" required
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">PAN Card Number</label>
+                            <input type="text" name="pan" value="{{ $merchant->profile->pan ?? '' }}" required placeholder="e.g. ABCDE1234F"
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono uppercase">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">GSTIN</label>
+                            <input type="text" name="gst" value="{{ $merchant->profile->gst ?? '' }}" required placeholder="e.g. 27ABCDE1234F1Z5"
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono uppercase">
+                        </div>
+                    </div>
+
+                    <div class="grid md:grid-cols-3 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Bank Name</label>
+                            <input type="text" name="bank_name" value="{{ $merchant->profile->bank_name ?? '' }}" required placeholder="e.g. HDFC Bank"
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Account Number</label>
+                            <input type="text" name="bank_account_number" value="{{ $merchant->profile->bank_account_number ?? '' }}" required placeholder="e.g. 5010012345678"
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[10px] font-bold text-slate-500 uppercase">Bank IFSC Code</label>
+                            <input type="text" name="bank_ifsc" value="{{ $merchant->profile->bank_ifsc ?? '' }}" required placeholder="e.g. HDFC0000001"
+                                   class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono uppercase">
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 justify-end pt-2">
+                        <button type="button" @click="showEditForm = false" class="px-4 h-9 border border-slate-200 hover:bg-slate-50 font-bold rounded-lg text-xs transition-colors bg-white">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 h-9 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-md shadow-blue-500/10 transition-colors">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
 
             <!-- Merchant Users & Access Control Card -->

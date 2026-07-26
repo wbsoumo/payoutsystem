@@ -110,6 +110,7 @@ Route::group(['prefix' => 'admin'], function () {
         Route::get('/merchants/{id}', [AdminDashboardController::class, 'merchantView'])->name('admin.merchants.view');
         Route::post('/merchants/{id}/status', [AdminDashboardController::class, 'merchantStatusUpdate'])->name('admin.merchants.status');
         Route::post('/merchants/{id}/kyc', [AdminDashboardController::class, 'merchantKycUpdate'])->name('admin.merchants.kyc');
+        Route::post('/merchants/{id}/profile', [AdminDashboardController::class, 'merchantProfileUpdate'])->name('admin.merchants.profile.update');
         Route::post('/merchants/{id}/adjust', [AdminDashboardController::class, 'merchantWalletAdjustment'])->name('admin.merchants.wallet.adjust');
         Route::post('/merchants/user/{id}/impersonate', [AdminDashboardController::class, 'impersonateMerchantUser'])->name('admin.merchants.impersonate');
         Route::post('/merchants/user/{id}/update', [AdminDashboardController::class, 'updateMerchantUser'])->name('admin.merchants.user.update');
