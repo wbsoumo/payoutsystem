@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import '../../../../core/constants/endpoints.dart';
 
 class BeneficiaryNotifier extends StateNotifier<List<Map<String, String>>> {
   BeneficiaryNotifier() : super([]) {
@@ -13,21 +14,21 @@ class BeneficiaryNotifier extends StateNotifier<List<Map<String, String>>> {
         'bank': 'State Bank of India',
         'account': '••••4556',
         'ifsc': 'SBIN0004556',
-        'logo': 'https://logo.clearbit.com/sbi.co.in'
+        'logo': '${Endpoints.baseUrl}/logo/sbi.co.in'
       },
       {
         'name': 'Sanjay Singh',
         'bank': 'HDFC Bank',
         'account': '••••8990',
         'ifsc': 'HDFC0001020',
-        'logo': 'https://logo.clearbit.com/hdfcbank.com'
+        'logo': '${Endpoints.baseUrl}/logo/hdfcbank.com'
       },
       {
         'name': 'Priya Sharma',
         'bank': 'ICICI Bank',
         'account': '••••1122',
         'ifsc': 'ICIC0000045',
-        'logo': 'https://logo.clearbit.com/icicibank.com'
+        'logo': '${Endpoints.baseUrl}/logo/icicibank.com'
       },
     ];
 

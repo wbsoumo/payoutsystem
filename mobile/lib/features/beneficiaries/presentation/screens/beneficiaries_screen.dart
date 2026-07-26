@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../providers/beneficiary_provider.dart';
+import '../../../../core/constants/endpoints.dart';
 
 class BeneficiariesScreen extends ConsumerStatefulWidget {
   const BeneficiariesScreen({Key? key}) : super(key: key);
@@ -123,7 +124,7 @@ class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
 
                           setModalState(() {
                             bankController.text = '$bankName - $branch';
-                            resolvedLogo = 'https://logo.clearbit.com/$domain';
+                            resolvedLogo = '${Endpoints.baseUrl}/logo/$domain';
                             isFetchingIfsc = false;
                           });
                         } catch (e) {
@@ -191,7 +192,7 @@ class _BeneficiariesScreenState extends ConsumerState<BeneficiariesScreen> {
                           'bank': bankController.text,
                           'account': '••••' + accountController.text.substring(accountController.text.length - 4),
                           'ifsc': ifscController.text.toUpperCase(),
-                          'logo': resolvedLogo.isNotEmpty ? resolvedLogo : 'https://logo.clearbit.com/generic-bank.com',
+                           'logo': resolvedLogo.isNotEmpty ? resolvedLogo : '${Endpoints.baseUrl}/logo/generic-bank.com',
                         };
                         
                         ref.read(beneficiaryProvider.notifier).addBeneficiary(newBen);

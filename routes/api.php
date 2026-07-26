@@ -13,6 +13,8 @@ use App\Http\Controllers\ApiController;
 |
 */
 
+Route::get('/v1/logo/{domain}', [ApiController::class, 'getCompanyLogo']);
+
 Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
     Route::get('/wallet/balance', [ApiController::class, 'getBalance']);
     Route::get('/wallet/ledger', [ApiController::class, 'getLedgerLogs']);

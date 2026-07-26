@@ -343,6 +343,28 @@ class ApiController extends Controller
         ]);
     }
 
+    public function getCompanyLogo($domain)
+    {
+        $key = \App\Models\Setting::get('logo_dev_api_key', '');
+
+        if (empty($key)) {
+            return redirect("https://logo.clearbit.com/{$domain}");
+        }
+
+        try {
+            $url = "https://img.logo.dev/{$domain}?token={$key}";
+            $response = \Illuminate\Support\Facades\Http::get($url);
+            if ($response->successful()) {
+                return response($response->body(), 200)
+                    ->header('Content-Type', $response->header('Content-Type') ?? 'image/png');
+            }
+        } catch (\Exception $e) {
+            // Log or fallback
+        }
+
+        return redirect("https://logo.clearbit.com/{$domain}");
+    }
+
     public function getLedgerLogs(Request $request)
     {
         $merchant = $request->get('merchant');

@@ -6,6 +6,7 @@ import 'package:dio/dio.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../beneficiaries/presentation/providers/beneficiary_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/constants/endpoints.dart';
 
 class MoneyTransferScreen extends ConsumerStatefulWidget {
   const MoneyTransferScreen({Key? key}) : super(key: key);
@@ -93,7 +94,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                           
                           setModalState(() {
                             bankController.text = '$bankName - $branch';
-                            resolvedLogo = 'https://logo.clearbit.com/$domain';
+                            resolvedLogo = '${Endpoints.baseUrl}/logo/$domain';
                             isFetchingIfsc = false;
                           });
                         } catch (e) {
@@ -145,7 +146,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                           'bank': bankController.text,
                           'account': '••••' + accountController.text.substring(accountController.text.length - 4),
                           'ifsc': ifscController.text.toUpperCase(),
-                          'logo': resolvedLogo.isNotEmpty ? resolvedLogo : 'https://logo.clearbit.com/generic-bank.com',
+                          'logo': resolvedLogo.isNotEmpty ? resolvedLogo : '${Endpoints.baseUrl}/logo/generic-bank.com',
                         };
                         ref.read(beneficiaryProvider.notifier).addBeneficiary(newBen);
                         setState(() {
