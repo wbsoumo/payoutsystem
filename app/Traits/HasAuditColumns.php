@@ -22,9 +22,11 @@ trait HasAuditColumns
 
         if (method_exists(static::class, 'restoring')) {
             static::deleting(function ($model) {
-                if (empty($model->deleted_by)) {
-                    $model->deleted_by = static::getAuditUserId();
-                    $model->save();
+                if (\Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'deleted_by')) {
+                    if (empty($model->deleted_by)) {
+                        $model->deleted_by = static::getAuditUserId();
+                        $model->save();
+                    }
                 }
             });
         }
