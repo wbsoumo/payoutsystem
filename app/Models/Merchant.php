@@ -24,6 +24,7 @@ class Merchant extends Model
         'monthly_volume',
         'status',
         'kyc_status',
+        'deposit_upi_id',
         'transaction_pin',
         'pin_failed_attempts',
         'pin_locked_until',

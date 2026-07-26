@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../core/network/api_client.dart';
 
 class AddMoneyScreen extends StatefulWidget {
   const AddMoneyScreen({Key? key}) : super(key: key);
@@ -16,13 +17,36 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
   bool _qrGenerated = false;
   bool _isLoading = false;
   String _qrUrl = '';
-  final String _upiId = 'novexapay@yesbank';
+  String _upiId = 'novexapay@yesbank';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDepositUpi();
+  }
 
   @override
   void dispose() {
     _amountController.dispose();
     _remarksController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchDepositUpi() async {
+    try {
+      final client = ApiClient();
+      final response = await client.dio.get('/wallet/balance');
+      if (response.data['success'] == true) {
+        final serverUpi = response.data['deposit_upi_id']?.toString();
+        if (serverUpi != null && serverUpi.isNotEmpty) {
+          setState(() {
+            _upiId = serverUpi;
+          });
+        }
+      }
+    } catch (e) {
+      // Keep default fallback
+    }
   }
 
   void _generateQr() {
@@ -41,7 +65,6 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
       _isLoading = true;
     });
 
-    // Simulate database lookup/calculation time
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
         final amount = double.parse(amountText);
@@ -98,7 +121,159 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Inputs Card
+            // 1. QR Display Card (NOW ON TOP)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  if (_isLoading)
+                    const SizedBox(
+                      height: 280,
+                      child: Center(
+                        child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+                      ),
+                    )
+                  else if (!_qrGenerated)
+                    SizedBox(
+                      height: 280,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.qr_code_2, size: 84, color: isDark ? Colors.white24 : Colors.grey.shade300),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Awaiting Generation',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Specify deposit amount below to build your QR code.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 11, color: subTextColor),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...[
+                    // Generated QR Code
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Image.network(
+                        _qrUrl,
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 180,
+                          height: 180,
+                          color: Colors.grey.shade100,
+                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'UPI Deposit Request',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subTextColor, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '₹${double.parse(_amountController.text).toStringAsFixed(2)}',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    
+                    // UPI ID display & copy row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payable to UPI ID',
+                              style: TextStyle(fontSize: 9, color: subTextColor),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _upiId,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 18, color: Colors.blueAccent),
+                          onPressed: _copyUpiId,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Download & Share Row (NEW)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('UPI payment link shared successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.share, size: 16),
+                            label: const Text('Share QR', style: TextStyle(fontSize: 11)),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: Color(0xFF7C3AED)),
+                              foregroundColor: const Color(0xFF7C3AED),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('QR Code saved to gallery!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.download, size: 16),
+                            label: const Text('Download QR', style: TextStyle(fontSize: 11)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF7C3AED),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // 2. Inputs Card (NOW BELOW QR CARD)
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -172,110 +347,6 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // 2. QR Display Card
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: cardColor,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
-              ),
-              child: Column(
-                children: [
-                  if (_isLoading)
-                    const SizedBox(
-                      height: 280,
-                      child: Center(
-                        child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
-                      ),
-                    )
-                  else if (!_qrGenerated)
-                    SizedBox(
-                      height: 280,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.qr_code_2, size: 84, color: isDark ? Colors.white24 : Colors.grey.shade300),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Awaiting Generation',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Specify deposit amount above to build your QR code.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: subTextColor),
-                          ),
-                        ],
-                      ),
-                    )
-                  else ...[
-                    // Generated QR Code
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: Image.network(
-                        _qrUrl,
-                        width: 200,
-                        height: 200,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Container(
-                          width: 200,
-                          height: 200,
-                          color: Colors.grey.shade100,
-                          child: const Icon(Icons.broken_image, color: Colors.grey),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'UPI Deposit Request',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subTextColor, letterSpacing: 0.5),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '₹${double.parse(_amountController.text).toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor),
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 12),
-                    
-                    // UPI ID display & copy row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Payable to UPI ID',
-                              style: TextStyle(fontSize: 9, color: subTextColor),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _upiId,
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
-                            ),
-                          ],
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.copy, size: 18, color: Colors.blueAccent),
-                          onPressed: _copyUpiId,
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),

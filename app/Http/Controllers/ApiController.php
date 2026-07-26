@@ -39,6 +39,7 @@ class ApiController extends Controller
             'currency' => $wallet->currency,
             'logo_dev_api_key' => \App\Models\Setting::get('logo_dev_api_key', ''),
             'has_set_pin' => !empty($merchant->transaction_pin),
+            'deposit_upi_id' => $merchant->deposit_upi_id ?? 'novexapay@yesbank',
         ]);
     }
 

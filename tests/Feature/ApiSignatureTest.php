@@ -74,6 +74,7 @@ class ApiSignatureTest extends TestCase
                  ->assertJsonFragment([
                      'success' => true,
                      'balance' => 10000.0,
+                     'deposit_upi_id' => 'novexapay@yesbank',
                  ]);
     }
 
