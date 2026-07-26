@@ -405,7 +405,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response.data['error'] ?? 'Payout failed.'), backgroundColor: Colors.red),
+          SnackBar(content: Text(response.data['error'] ?? response.data['error_message'] ?? 'Payout failed.'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -414,7 +414,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
       if (e is DioException && e.response != null) {
         final data = e.response!.data;
         if (data is Map) {
-          errorMsg = data['error'] ?? data['message'] ?? errorMsg;
+          errorMsg = data['error'] ?? data['error_message'] ?? data['message'] ?? errorMsg;
         }
       }
       ScaffoldMessenger.of(context).showSnackBar(
