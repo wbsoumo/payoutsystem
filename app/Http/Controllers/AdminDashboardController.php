@@ -368,6 +368,7 @@ class AdminDashboardController extends Controller
             'jiopay_key' => 'required|string',
             'jiopay_entity_id' => 'required|string',
             'jiopay_customer_id' => 'required|string',
+            'logo_dev_api_key' => 'nullable|string',
         ]);
 
         \App\Models\Setting::set('default_gateway', $request->default_gateway);
@@ -375,13 +376,14 @@ class AdminDashboardController extends Controller
         \App\Models\Setting::set('jiopay_key', $request->jiopay_key);
         \App\Models\Setting::set('jiopay_entity_id', $request->jiopay_entity_id);
         \App\Models\Setting::set('jiopay_customer_id', $request->jiopay_customer_id);
+        \App\Models\Setting::set('logo_dev_api_key', $request->logo_dev_api_key);
 
         $this->auditLogService->log(
             'admin',
             $this->getAdmin()->id,
             null,
             'system_settings_update',
-            "Updated Jiopay gateway upstream credentials."
+            "Updated Jiopay gateway upstream credentials and Logo.dev API keys."
         );
 
         return back()->with('success', 'Upstream gateway configurations updated successfully.');

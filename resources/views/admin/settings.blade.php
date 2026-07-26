@@ -50,6 +50,12 @@
                    class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">
         </div>
 
+        <div class="space-y-1">
+            <label for="logo_dev_api_key" class="text-[10px] font-bold text-slate-500 uppercase">Logo.dev API Key (token)</label>
+            <input type="text" name="logo_dev_api_key" id="logo_dev_api_key" value="{{ $settings['logo_dev_api_key'] ?? '' }}"
+                   class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">
+        </div>
+
         <button type="submit" class="px-6 h-11 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-blue-500/10 transition-colors">
             Update Gateway Configurations
         </button>

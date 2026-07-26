@@ -37,6 +37,7 @@ class ApiController extends Controller
             'balance' => (float) $wallet->balance,
             'frozen_balance' => (float) $wallet->frozen_balance,
             'currency' => $wallet->currency,
+            'logo_dev_api_key' => \App\Models\Setting::get('logo_dev_api_key', ''),
         ]);
     }
 
