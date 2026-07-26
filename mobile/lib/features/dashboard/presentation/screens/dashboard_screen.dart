@@ -394,10 +394,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     onTap: () => context.push('/transfer'),
                   ),
                   CircleActionItem(
-                    icon: Icons.repeat,
-                    label: 'Request',
+                    icon: Icons.qr_code_scanner,
+                    label: 'Add Money',
                     isDark: isDark,
-                    onTap: () => context.push('/ledger'),
+                    onTap: () => context.push('/add-money'),
                   ),
                   CircleActionItem(
                     icon: Icons.account_balance_wallet,
