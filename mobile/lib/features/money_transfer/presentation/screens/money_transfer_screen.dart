@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../beneficiaries/presentation/providers/beneficiary_provider.dart';
+import '../../../../core/network/api_client.dart';
 
 class MoneyTransferScreen extends ConsumerStatefulWidget {
   const MoneyTransferScreen({Key? key}) : super(key: key);
@@ -374,20 +375,51 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   }
 
   void _processPayout(double amount) async {
-    // Show premium processing spinner loading state
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white)),
     );
 
-    await Future.delayed(const Duration(seconds: 2)); // Simulate API roundtrip
-    Navigator.pop(context); // Dismiss spinner
+    final client = ApiClient();
+    try {
+      final response = await client.dio.post(
+        '/payouts',
+        data: {
+          'client_reference_id': 'ref_${DateTime.now().millisecondsSinceEpoch}',
+          'amount': amount,
+          'bank_name': _selectedBeneficiaryData!['bank'],
+          'bank_account_number': _selectedBeneficiaryData!['account']!.replaceAll('••••', '9999'),
+          'bank_ifsc': _selectedBeneficiaryData!['ifsc'],
+          'bank_holder_name': _selectedBeneficiaryData!['name'],
+        },
+      );
 
-    // Navigate to shareable receipt view
-    context.pushReplacement(
-      '/receipt?amount=$amount&beneficiary=$_selectedBeneficiary&ref=TXN${DateTime.now().millisecondsSinceEpoch}',
-    );
+      Navigator.pop(context); // Dismiss spinner
+
+      if (response.data['success'] == true) {
+        final refId = response.data['reference_id'] ?? 'TXN${DateTime.now().millisecondsSinceEpoch}';
+        context.pushReplacement(
+          '/receipt?amount=$amount&beneficiary=$_selectedBeneficiary&ref=$refId',
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(response.data['error'] ?? 'Payout failed.'), backgroundColor: Colors.red),
+        );
+      }
+    } catch (e) {
+      Navigator.pop(context); // Dismiss spinner
+      String errorMsg = 'An error occurred during payout.';
+      if (e is DioException && e.response != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          errorMsg = data['error'] ?? data['message'] ?? errorMsg;
+        }
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMsg), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override

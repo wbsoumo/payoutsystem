@@ -15,7 +15,9 @@ use App\Http\Controllers\ApiController;
 
 Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
     Route::get('/wallet/balance', [ApiController::class, 'getBalance']);
+    Route::get('/wallet/ledger', [ApiController::class, 'getLedgerLogs']);
     Route::post('/payouts', [ApiController::class, 'createPayout']);
+    Route::get('/payouts', [ApiController::class, 'getPayouts']);
     Route::get('/payouts/{reference_id}', [ApiController::class, 'getPayout']);
 
     // Transaction PIN Management

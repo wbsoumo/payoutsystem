@@ -317,6 +317,60 @@ class ApiController extends Controller
         return response()->json(['success' => true, 'message' => 'Transaction PIN modified successfully.']);
     }
 
+    public function getPayouts(Request $request)
+    {
+        $merchant = $request->get('merchant');
+
+        $payouts = Transaction::where('merchant_id', $merchant->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($t) {
+                return [
+                    'ref' => $t->reference_id,
+                    'beneficiary' => $t->api_request_payload['bank_holder_name'] ?? 'N/A',
+                    'bank' => $t->api_request_payload['bank_name'] ?? 'N/A',
+                    'account' => $t->api_request_payload['bank_account_number'] ?? 'N/A',
+                    'ifsc' => $t->api_request_payload['bank_ifsc'] ?? 'N/A',
+                    'amount' => '₹' . number_format($t->amount, 2),
+                    'status' => $t->status,
+                    'date' => $t->created_at->format('M d, H:i'),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'payouts' => $payouts,
+        ]);
+    }
+
+    public function getLedgerLogs(Request $request)
+    {
+        $merchant = $request->get('merchant');
+
+        $ledgers = \App\Models\WalletLedger::where('wallet_id', $merchant->wallet->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($l) {
+                return [
+                    'type' => $l->type,
+                    'amount' => '₹' . number_format($l->amount, 2),
+                    'desc' => $l->description,
+                    'date' => $l->created_at->format('M d, H:i'),
+                    'bal' => '₹' . number_format($l->closing_balance, 2),
+                ];
+            });
+
+        $openingBalance = $ledgers->isEmpty() ? 0.00 : floatval(str_replace(['₹', ','], '', $ledgers->last()['bal']));
+        $closingBalance = $ledgers->isEmpty() ? 0.00 : floatval(str_replace(['₹', ','], '', $ledgers->first()['bal']));
+
+        return response()->json([
+            'success' => true,
+            'opening_balance' => '₹' . number_format($openingBalance, 2),
+            'closing_balance' => '₹' . number_format($closingBalance, 2),
+            'logs' => $ledgers,
+        ]);
+    }
+
     public function resetPin(Request $request)
     {
         $merchant = $request->get('merchant');

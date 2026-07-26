@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:dio/dio.dart';
+import '../../../../core/network/api_client.dart';
 
 class TransactionsScreen extends StatefulWidget {
   const TransactionsScreen({Key? key}) : super(key: key);
@@ -9,11 +11,7 @@ class TransactionsScreen extends StatefulWidget {
 }
 
 class _TransactionsScreenState extends State<TransactionsScreen> {
-  final List<Map<String, dynamic>> _transactions = [
-    {'ref': 'TXN178923011', 'beneficiary': 'Vijay Kumar', 'amount': '₹5,000.00', 'status': 'success', 'date': 'Today, 14:20'},
-    {'ref': 'TXN178923012', 'beneficiary': 'Sanjay Singh', 'amount': '₹2,500.00', 'status': 'pending', 'date': 'Today, 11:05'},
-    {'ref': 'TXN178923013', 'beneficiary': 'Priya Sharma', 'amount': '₹1,200.00', 'status': 'failed', 'date': 'Yesterday, 17:35'},
-  ];
+  final List<Map<String, dynamic>> _transactions = [];
   
   String _selectedStatus = 'all';
   bool _isLoading = true;
@@ -25,11 +23,25 @@ class _TransactionsScreenState extends State<TransactionsScreen> {
   }
 
   Future<void> _loadTransactions() async {
-    await Future.delayed(const Duration(milliseconds: 1200));
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/payouts');
+      if (response.data['success'] == true) {
+        final List<dynamic> payouts = response.data['payouts'] ?? [];
+        if (mounted) {
+          setState(() {
+            _transactions.clear();
+            _transactions.addAll(payouts.map((p) => Map<String, dynamic>.from(p)));
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

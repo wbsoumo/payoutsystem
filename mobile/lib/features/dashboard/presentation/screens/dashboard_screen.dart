@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/network/api_client.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -12,6 +14,30 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _showBalance = true;
+  String _balance = '₹0.00';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/wallet/balance');
+      if (response.data['success'] == true) {
+        final double bal = double.tryParse(response.data['balance'].toString()) ?? 0.00;
+        if (mounted) {
+          setState(() {
+            _balance = '₹' + bal.toStringAsFixed(2);
+          });
+        }
+      }
+    } catch (e) {
+      // Keep ₹0.00
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +146,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _showBalance ? '₹1,100.00' : '•••••••',
+                          _showBalance ? _balance : '•••••••',
                           style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
                         ),
                         IconButton(

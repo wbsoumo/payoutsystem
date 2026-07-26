@@ -94,7 +94,7 @@ class DatabaseSeeder extends Seeder
             'business_type' => 'pvt_ltd',
             'website' => 'https://stark.com',
             'message' => 'Need high volume payouts API to disburse vendor invoices.',
-            'status' => 'pending',
+            'status' => 'converted',
         ]);
 
         ContactRequest::create([
@@ -110,5 +110,38 @@ class DatabaseSeeder extends Seeder
             'message' => 'Looking for secure corporate wallet ledger mapping.',
             'status' => 'pending',
         ]);
+
+        // Automatically convert Tony Stark's enquiry into a real merchant!
+        $merchant = \App\Models\Merchant::create([
+            'company_name' => 'Stark Industries Ltd',
+            'business_name' => 'StarkPay',
+            'business_type' => 'pvt_ltd',
+            'website' => 'https://stark.com',
+            'phone' => '+919988776655',
+            'email' => 'tony@stark.com',
+            'country' => 'India',
+            'monthly_volume' => 'above_2cr',
+            'status' => 'active',
+            'kyc_status' => 'approved',
+        ]);
+
+        \App\Models\Wallet::create([
+            'merchant_id' => $merchant->id,
+            'balance' => 500000.00, // Seed 5 Lakhs for testing!
+            'frozen_balance' => 0.00,
+            'currency' => 'INR',
+        ]);
+
+        \App\Models\MerchantUser::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Tony Stark',
+            'email' => 'tony@stark.com',
+            'password' => Hash::make('password123'),
+            'status' => 'active',
+        ]);
+
+        // Generate active keys for the merchant
+        $apiService = app(\App\Services\ApiService::class);
+        $apiService->generateKeys($merchant->id);
     }
 }
