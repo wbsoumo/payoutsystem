@@ -56,6 +56,12 @@
                    class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">
         </div>
 
+        <div class="space-y-1">
+            <label for="deposit_upi_id" class="text-[10px] font-bold text-slate-500 uppercase">Default Deposit UPI ID</label>
+            <input type="text" name="deposit_upi_id" id="deposit_upi_id" value="{{ $settings['deposit_upi_id'] ?? 'novexapay@yesbank' }}" required
+                   class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">
+        </div>
+
         <button type="submit" class="px-6 h-11 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-blue-500/10 transition-colors">
             Update Gateway Configurations
         </button>

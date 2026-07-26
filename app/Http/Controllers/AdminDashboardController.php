@@ -369,6 +369,7 @@ class AdminDashboardController extends Controller
             'jiopay_entity_id' => 'required|string',
             'jiopay_customer_id' => 'required|string',
             'logo_dev_api_key' => 'nullable|string',
+            'deposit_upi_id' => 'required|string',
         ]);
 
         \App\Models\Setting::set('default_gateway', $request->default_gateway);
@@ -377,16 +378,17 @@ class AdminDashboardController extends Controller
         \App\Models\Setting::set('jiopay_entity_id', $request->jiopay_entity_id);
         \App\Models\Setting::set('jiopay_customer_id', $request->jiopay_customer_id);
         \App\Models\Setting::set('logo_dev_api_key', $request->logo_dev_api_key);
+        \App\Models\Setting::set('deposit_upi_id', $request->deposit_upi_id);
 
         $this->auditLogService->log(
             'admin',
             $this->getAdmin()->id,
             null,
             'system_settings_update',
-            "Updated Jiopay gateway upstream credentials and Logo.dev API keys."
+            "Updated Jiopay gateway upstream credentials, Logo.dev API keys, and deposit UPI ID."
         );
 
-        return back()->with('success', 'Upstream gateway configurations updated successfully.');
+        return back()->with('success', 'Upstream gateway configurations and deposit UPI updated successfully.');
     }
 
     public function merchantProfileUpdate(Request $request, string $id)

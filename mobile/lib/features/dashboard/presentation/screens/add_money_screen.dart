@@ -121,7 +121,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. QR Display Card (NOW ON TOP)
+            // 1. QR Display Card (ALWAYS SHOWING A QR CODE)
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
@@ -138,29 +138,66 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                         child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
                       ),
                     )
-                  else if (!_qrGenerated)
-                    SizedBox(
-                      height: 280,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.qr_code_2, size: 84, color: isDark ? Colors.white24 : Colors.grey.shade300),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Awaiting Generation',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Specify deposit amount below to build your QR code.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 11, color: subTextColor),
-                          ),
-                        ],
+                  else if (!_qrGenerated) ...[
+                    // Standard Static QR Code without amount on load
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
                       ),
-                    )
-                  else ...[
-                    // Generated QR Code
+                      child: Image.network(
+                        'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${Uri.encodeComponent('upi://pay?pa=$_upiId&pn=Novexapay')}',
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 180,
+                          height: 180,
+                          color: Colors.grey.shade100,
+                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Standard UPI Deposit QR',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subTextColor, letterSpacing: 0.5),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Open Payment QR',
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payable to UPI ID',
+                              style: TextStyle(fontSize: 9, color: subTextColor),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _upiId,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.copy, size: 18, color: Colors.blueAccent),
+                          onPressed: _copyUpiId,
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    // Generated Dynamic QR Code
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -183,7 +220,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      'UPI Deposit Request',
+                      'Dynamic UPI Request QR',
                       style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: subTextColor, letterSpacing: 0.5),
                     ),
                     const SizedBox(height: 4),
@@ -194,8 +231,6 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                     const SizedBox(height: 16),
                     const Divider(),
                     const SizedBox(height: 12),
-                    
-                    // UPI ID display & copy row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -221,7 +256,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Download & Share Row (NEW)
+                    // Download & Share Row
                     Row(
                       children: [
                         Expanded(
@@ -273,7 +308,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
             ),
             const SizedBox(height: 20),
 
-            // 2. Inputs Card (NOW BELOW QR CARD)
+            // 2. Inputs Card
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -338,7 +373,7 @@ class _AddMoneyScreenState extends State<AddMoneyScreen> {
                   ElevatedButton.icon(
                     onPressed: _generateQr,
                     icon: const Icon(Icons.qr_code, size: 16),
-                    label: const Text('Generate QR Code', style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text('Generate Request QR', style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF7C3AED),
                       foregroundColor: Colors.white,
