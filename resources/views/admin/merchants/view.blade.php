@@ -5,6 +5,32 @@
 @section('content')
 <div class="space-y-6">
 
+    @if($merchant->kyc_status === 'submitted')
+        <div class="p-6 bg-yellow-50/80 border border-yellow-200 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
+            <div class="space-y-1">
+                <span class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500 text-white uppercase tracking-wider">KYC Pending Audit</span>
+                <h4 class="text-sm font-bold text-slate-800">This Merchant has submitted new compliance documentation.</h4>
+                <p class="text-xs text-slate-600">Please review their GST certificate, PAN card details, and bank account proofs below before changing their activation status.</p>
+            </div>
+            <div class="flex gap-2">
+                <form action="{{ route('admin.merchants.kyc', $merchant->id) }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="kyc_status" value="rejected">
+                    <button type="submit" class="px-4 py-2 border border-red-200 hover:bg-red-50 text-red-600 font-bold rounded-xl text-xs transition-colors bg-white">
+                        <i class="fa-solid fa-circle-xmark mr-1"></i> Reject Documents
+                    </button>
+                </form>
+                <form action="{{ route('admin.merchants.kyc', $merchant->id) }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="kyc_status" value="approved">
+                    <button type="submit" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl text-xs shadow-md shadow-green-500/10 transition-colors">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Approve Compliance
+                    </button>
+                </form>
+            </div>
+        </div>
+    @endif
+
     <!-- Card Header Info -->
     <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row justify-between gap-6">
         <div class="space-y-2">

@@ -18,6 +18,15 @@
     <form action="{{ route('admin.settings.update') }}" method="POST" class="space-y-4">
         @csrf
         <div class="space-y-1">
+            <label for="default_gateway" class="text-[10px] font-bold text-slate-500 uppercase">Active Payout Gateway Route</label>
+            <select name="default_gateway" id="default_gateway" required
+                    class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-bold">
+                <option value="mock" {{ ($settings['default_gateway'] ?? 'mock') === 'mock' ? 'selected' : '' }}>Sandbox Mock Route (Testing)</option>
+                <option value="jiopay" {{ ($settings['default_gateway'] ?? '') === 'jiopay' ? 'selected' : '' }}>Jiopay Production API (Live Payouts)</option>
+            </select>
+        </div>
+
+        <div class="space-y-1">
             <label for="jiopay_mid" class="text-[10px] font-bold text-slate-500 uppercase">Jiopay Merchant ID (bharat_mid)</label>
             <input type="text" name="jiopay_mid" id="jiopay_mid" value="{{ $settings['jiopay_mid'] ?? '' }}" required
                    class="w-full h-11 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-slate-50/50 font-mono">

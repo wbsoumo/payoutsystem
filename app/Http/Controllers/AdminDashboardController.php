@@ -363,12 +363,14 @@ class AdminDashboardController extends Controller
     public function settingsUpdate(Request $request)
     {
         $request->validate([
+            'default_gateway' => 'required|string|in:mock,jiopay',
             'jiopay_mid' => 'required|string',
             'jiopay_key' => 'required|string',
             'jiopay_entity_id' => 'required|string',
             'jiopay_customer_id' => 'required|string',
         ]);
 
+        \App\Models\Setting::set('default_gateway', $request->default_gateway);
         \App\Models\Setting::set('jiopay_mid', $request->jiopay_mid);
         \App\Models\Setting::set('jiopay_key', $request->jiopay_key);
         \App\Models\Setting::set('jiopay_entity_id', $request->jiopay_entity_id);

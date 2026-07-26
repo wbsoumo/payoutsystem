@@ -13,6 +13,32 @@ class JioPayService
      */
     public function transfer(array $payoutDetails): array
     {
+        $gateway = Setting::get('default_gateway', 'mock');
+
+        if ($gateway === 'mock') {
+            Log::info("Sandbox Mock Route active. Simulating success response.");
+            return [
+                'status' => 'success',
+                'provider_reference_id' => 'mock_txn_' . \Illuminate\Support\Str::random(12),
+                'message' => 'Payout Initiated (Mock)',
+                'response' => [
+                    'status' => true,
+                    'msg' => 'Payout Initiated',
+                    'data' => [
+                        'order_id' => $payoutDetails['order_id'],
+                        'provider_txn_id' => 'mock_txn_' . \Illuminate\Support\Str::random(12),
+                        'utr' => null,
+                        'txn_status' => 'processing',
+                        'amount' => (float)$payoutDetails['amount'],
+                        'fees' => 5.0,
+                        'debit_amount' => (float)$payoutDetails['amount'] + 5.0,
+                        'opening_balance' => 10000.0,
+                        'closing_balance' => 9995.0
+                    ]
+                ],
+            ];
+        }
+
         $mid = Setting::get('jiopay_mid', 'YOUR_BHARAT_MID');
         $key = Setting::get('jiopay_key', 'YOUR_BHARAT_KEY');
         $entityId = Setting::get('jiopay_entity_id', '3173ad0e-xxxx-xxxxxx-9c57830b2d07');

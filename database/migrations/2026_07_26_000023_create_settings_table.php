@@ -21,6 +21,7 @@ return new class extends Migration
             ['key' => 'jiopay_key', 'value' => 'YOUR_BHARAT_KEY', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'jiopay_entity_id', 'value' => '3173ad0e-xxxx-xxxxxx-9c57830b2d07', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'jiopay_customer_id', 'value' => 'CUST10001', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'default_gateway', 'value' => 'mock', 'created_at' => now(), 'updated_at' => now()],
         ]);
     }
 
