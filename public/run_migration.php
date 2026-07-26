@@ -45,9 +45,17 @@ try {
         }
     }
     
-    echo "\nClearing config cache...\n";
-    \Illuminate\Support\Facades\Artisan::call('config:clear');
-    echo "Config cache cleared successfully.\n";
+    echo "\nClearing config cache programmatically...\n";
+    $configCache = base_path('bootstrap/cache/config.php');
+    if (file_exists($configCache)) {
+        if (@unlink($configCache)) {
+            echo "Config cache file deleted successfully.\n";
+        } else {
+            echo "Warning: Failed to delete config cache file.\n";
+        }
+    } else {
+        echo "No cached config file found (already clear).\n";
+    }
     
 } catch (\Exception $e) {
     echo "Migration failed: " . $e->getMessage() . "\n";
