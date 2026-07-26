@@ -10,6 +10,7 @@ import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/money_transfer/presentation/screens/money_transfer_screen.dart';
 import 'features/money_transfer/presentation/screens/receipt_screen.dart';
 import 'features/beneficiaries/presentation/screens/beneficiaries_screen.dart';
+import 'features/beneficiaries/presentation/screens/add_beneficiary_screen.dart';
 import 'features/ledger/presentation/screens/ledger_screen.dart';
 import 'features/transactions/presentation/screens/transactions_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
@@ -61,6 +62,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/beneficiaries',
       builder: (BuildContext context, GoRouterState state) => const BeneficiariesScreen(),
+    ),
+    GoRoute(
+      path: '/add-beneficiary',
+      builder: (BuildContext context, GoRouterState state) => const AddBeneficiaryScreen(),
     ),
     GoRoute(
       path: '/ledger',

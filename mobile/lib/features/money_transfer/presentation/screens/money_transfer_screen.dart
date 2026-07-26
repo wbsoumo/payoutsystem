@@ -38,139 +38,14 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   double _chargeRate = 5.00;
   double _commissionRate = 1.25;
 
-  void _showAddBeneficiarySheet() {
-    final nameController = TextEditingController();
-    final bankController = TextEditingController();
-    final accountController = TextEditingController();
-    final ifscController = TextEditingController();
-    
-    bool isFetchingIfsc = false;
-    String resolvedLogo = '';
-    String fetchError = '';
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('Add New Beneficiary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-                  const SizedBox(height: 16),
-                  
-                  TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Holder Name', border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))))),
-                  const SizedBox(height: 12),
-                  
-                  TextField(
-                    controller: ifscController,
-                    maxLength: 11,
-                    textCapitalization: TextCapitalization.characters,
-                    decoration: InputDecoration(
-                      labelText: 'IFSC Code',
-                      hintText: 'e.g. SBIN0004556',
-                      counterText: '',
-                      border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                      suffixIcon: isFetchingIfsc ? const SizedBox(width: 20, height: 20, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2))) : null,
-                    ),
-                    onChanged: (val) async {
-                      if (val.length == 11) {
-                        setModalState(() {
-                          isFetchingIfsc = true;
-                          fetchError = '';
-                        });
-                        try {
-                          final response = await Dio().get('https://ifsc.razorpay.com/${val.toUpperCase()}');
-                          final bankName = response.data['BANK'] ?? '';
-                          final branch = response.data['BRANCH'] ?? '';
-                          
-                          final prefix = val.substring(0, 4).toUpperCase();
-                          final domain = _bankDomains[prefix] ?? 'generic-bank.com';
-                          
-                          setModalState(() {
-                            bankController.text = '$bankName - $branch';
-                            resolvedLogo = '${Endpoints.baseUrl}/logo/$domain';
-                            isFetchingIfsc = false;
-                          });
-                        } catch (e) {
-                          setModalState(() {
-                            isFetchingIfsc = false;
-                            fetchError = 'Could not resolve bank details. Check IFSC code.';
-                          });
-                        }
-                      }
-                    },
-                  ),
-                  if (fetchError.isNotEmpty) ...[
-                    const SizedBox(height: 6),
-                    Text(fetchError, style: const TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold)),
-                  ],
-                  const SizedBox(height: 12),
-
-                  // Bank details populated
-                  Row(
-                    children: [
-                      if (resolvedLogo.isNotEmpty) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(resolvedLogo, width: 36, height: 36, fit: BoxFit.cover, errorBuilder: (c, o, s) => const Icon(Icons.account_balance, size: 36)),
-                        ),
-                        const SizedBox(width: 12),
-                      ],
-                      Expanded(
-                        child: TextField(
-                          controller: bankController,
-                          decoration: const InputDecoration(
-                            labelText: 'Bank Name & Branch',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  TextField(controller: accountController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Account Number', border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))))),
-                  const SizedBox(height: 24),
-
-                  ElevatedButton(
-                    onPressed: () {
-                      if (nameController.text.isNotEmpty && accountController.text.isNotEmpty && bankController.text.isNotEmpty) {
-                        final newBen = {
-                          'name': nameController.text,
-                          'bank': bankController.text,
-                          'account': '••••' + accountController.text.substring(accountController.text.length - 4),
-                          'ifsc': ifscController.text.toUpperCase(),
-                          'logo': resolvedLogo.isNotEmpty ? resolvedLogo : '${Endpoints.baseUrl}/logo/generic-bank.com',
-                        };
-                        ref.read(beneficiaryProvider.notifier).addBeneficiary(newBen);
-                        setState(() {
-                          _selectedBeneficiaryData = newBen;
-                          _selectedBeneficiary = newBen['name']!;
-                        });
-                        Navigator.pop(context);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF4361EE),
-                      foregroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                    child: const Text('Save & Select', style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+  Future<void> _showAddBeneficiarySheet() async {
+    final result = await context.push('/add-beneficiary');
+    if (result != null && result is Map) {
+      setState(() {
+        _selectedBeneficiaryData = Map<String, String>.from(result.cast<String, String>());
+        _selectedBeneficiary = result['name']!;
+      });
+    }
   }
 
   void _showSelectBeneficiarySheet() {
