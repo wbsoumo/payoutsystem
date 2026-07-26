@@ -31,7 +31,9 @@ class _PermissionCheckScreenState extends State<PermissionCheckScreen> {
           _storageGranted = true;
           _checking = false;
         });
-        context.go('/login');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/login');
+        });
       }
       return;
     }
@@ -47,14 +49,18 @@ class _PermissionCheckScreenState extends State<PermissionCheckScreen> {
 
     if (locStatus.isGranted && storeStatus.isGranted) {
       if (mounted) {
-        context.go('/login');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/login');
+        });
       }
     }
   }
 
   Future<void> _requestPermissions() async {
     if (kIsWeb) {
-      context.go('/login');
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        context.go('/login');
+      });
       return;
     }
 
@@ -68,7 +74,9 @@ class _PermissionCheckScreenState extends State<PermissionCheckScreen> {
 
     if (locReq.isGranted && storeReq.isGranted) {
       if (mounted) {
-        context.go('/login');
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          context.go('/login');
+        });
       }
     } else {
       // If permanently denied, prompt user to open app settings
