@@ -59,7 +59,7 @@ class AdminDashboardController extends Controller
 
     public function merchantView(string $id)
     {
-        $merchant = Merchant::with(['wallet', 'profile', 'apiKeys', 'ipWhitelists'])->findOrFail($id);
+        $merchant = Merchant::with(['wallet', 'profile', 'apiKeys', 'ipWhitelists', 'users'])->findOrFail($id);
         $transactions = $merchant->transactions()->orderBy('created_at', 'desc')->take(10)->get();
         $logins = LoginHistory::where('user_type', 'merchant_user')
             ->whereIn('user_id', $merchant->users()->pluck('id'))
@@ -282,5 +282,74 @@ class AdminDashboardController extends Controller
     {
         $logs = ApiLog::with('merchant')->orderBy('created_at', 'desc')->paginate(20);
         return view('admin.logs.api', compact('logs'));
+    }
+
+    public function impersonateMerchantUser(string $merchantUserId)
+    {
+        $user = \App\Models\MerchantUser::findOrFail($merchantUserId);
+        
+        Auth::guard('merchant')->logout();
+        Auth::guard('merchant')->login($user);
+        
+        session()->put('impersonating_from_admin', true);
+        session()->put('admin_id', $this->getAdmin()->id);
+        
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            $user->merchant_id,
+            'impersonation_start',
+            "Started impersonating merchant user: {$user->email} ({$user->name})."
+        );
+
+        return redirect()->route('merchant.dashboard')->with('success', "Logged in as {$user->name}");
+    }
+
+    public function updateMerchantUser(Request $request, string $merchantUserId)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:merchant_users,email,' . $merchantUserId,
+            'phone' => 'required|string|max:15',
+        ]);
+
+        $user = \App\Models\MerchantUser::findOrFail($merchantUserId);
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+            'phone' => $request->phone,
+        ]);
+
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            $user->merchant_id,
+            'merchant_user_update',
+            "Updated profile details for merchant user: {$user->email}."
+        );
+
+        return back()->with('success', 'Merchant user profile updated successfully.');
+    }
+
+    public function changeMerchantUserPassword(Request $request, string $merchantUserId)
+    {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = \App\Models\MerchantUser::findOrFail($merchantUserId);
+        $user->update([
+            'password' => \Illuminate\Support\Facades\Hash::make($request->password),
+        ]);
+
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            $user->merchant_id,
+            'merchant_user_password_change',
+            "Updated password for merchant user: {$user->email}."
+        );
+
+        return back()->with('success', 'Merchant user password reset successfully.');
     }
 }

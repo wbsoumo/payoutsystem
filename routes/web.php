@@ -84,6 +84,9 @@ Route::group(['prefix' => 'admin'], function () {
         Route::post('/merchants/{id}/status', [AdminDashboardController::class, 'merchantStatusUpdate'])->name('admin.merchants.status');
         Route::post('/merchants/{id}/kyc', [AdminDashboardController::class, 'merchantKycUpdate'])->name('admin.merchants.kyc');
         Route::post('/merchants/{id}/adjust', [AdminDashboardController::class, 'merchantWalletAdjustment'])->name('admin.merchants.wallet.adjust');
+        Route::post('/merchants/user/{id}/impersonate', [AdminDashboardController::class, 'impersonateMerchantUser'])->name('admin.merchants.impersonate');
+        Route::post('/merchants/user/{id}/update', [AdminDashboardController::class, 'updateMerchantUser'])->name('admin.merchants.user.update');
+        Route::post('/merchants/user/{id}/password', [AdminDashboardController::class, 'changeMerchantUserPassword'])->name('admin.merchants.user.password');
 
         // Enquiries
         Route::get('/enquiries', [AdminDashboardController::class, 'enquiries'])->name('admin.enquiries');

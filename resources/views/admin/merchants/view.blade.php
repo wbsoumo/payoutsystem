@@ -80,6 +80,78 @@
                 </div>
             </div>
 
+            <!-- Merchant Users & Access Control Card -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-lg">Merchant Representative Users</h3>
+                    <p class="text-xs text-slate-500">Logins configured for this merchant entity. You can edit credentials or login directly as any user.</p>
+                </div>
+
+                <div class="space-y-6">
+                    @forelse($merchant->users as $u)
+                        <div class="p-5 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-4">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div class="space-y-1">
+                                    <span class="text-sm font-bold text-slate-800 block">{{ $u->name }}</span>
+                                    <span class="text-xs text-slate-500 block font-mono">{{ $u->email }} | {{ $u->phone }}</span>
+                                    <span class="text-[10px] text-slate-400 font-bold block uppercase mt-1">Role: {{ ucfirst($u->role ?? 'admin') }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <!-- Impersonate Button -->
+                                    <form action="{{ route('admin.merchants.impersonate', $u->id) }}" method="POST" target="_blank">
+                                        @csrf
+                                        <button type="submit" class="px-3 h-9 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg transition-colors text-xs flex items-center gap-1.5 shadow-sm">
+                                            <i class="fa-solid fa-right-to-bracket"></i> Login as Merchant
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="h-[1px] bg-slate-200/60"></div>
+
+                            <!-- Edit and Reset Password Panel -->
+                            <div class="grid md:grid-cols-2 gap-6">
+                                <!-- Update Profile form -->
+                                <form action="{{ route('admin.merchants.user.update', $u->id) }}" method="POST" class="space-y-3">
+                                    @csrf
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Update Profile Details</span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="text" name="name" value="{{ $u->name }}" required placeholder="Full Name"
+                                               class="h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                        <input type="text" name="phone" value="{{ $u->phone }}" required placeholder="Phone Number"
+                                               class="h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <input type="email" name="email" value="{{ $u->email }}" required placeholder="Email Address"
+                                               class="w-full h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                        <button type="submit" class="px-4 h-9 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg text-xs transition-colors shrink-0">
+                                            Save
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <!-- Reset Password form -->
+                                <form action="{{ route('admin.merchants.user.password', $u->id) }}" method="POST" class="space-y-3">
+                                    @csrf
+                                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Reset Login Password</span>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <input type="password" name="password" required placeholder="New Password"
+                                               class="h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                        <input type="password" name="password_confirmation" required placeholder="Confirm"
+                                               class="h-9 px-3 rounded-lg border border-slate-200 text-xs focus:outline-none focus:border-blue-500 bg-white">
+                                    </div>
+                                    <button type="submit" class="w-full h-9 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs transition-colors shadow-sm shadow-red-500/10">
+                                        Reset User Password
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="text-center py-6 text-slate-400 font-semibold text-xs">No representative users configured for this merchant.</div>
+                    @endforelse
+                </div>
+            </div>
+
             <!-- Login histories/Map Mock -->
             <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                 <div>
