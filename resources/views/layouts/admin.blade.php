@@ -23,8 +23,8 @@
 <body class="bg-slate-50 text-slate-900 antialiased font-sans min-h-screen flex" x-data="{}">
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between flex-shrink-0 border-r border-slate-800">
-        <div class="p-6 space-y-8">
+    <aside class="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between flex-shrink-0 border-r border-slate-800 h-screen sticky top-0">
+        <div class="p-6 space-y-8 flex-grow overflow-y-auto">
             <!-- Logo -->
             <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-2">
                 <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center">

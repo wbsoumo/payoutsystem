@@ -34,7 +34,7 @@
 <body class="bg-slate-50 text-slate-900 antialiased font-sans min-h-screen flex">
 
     <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between flex-shrink-0 border-r border-slate-800">
+    <aside class="w-64 bg-slate-900 text-slate-400 flex flex-col justify-between flex-shrink-0 border-r border-slate-800 h-screen sticky top-0">
         <div class="p-6 space-y-6 flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
             <!-- Logo -->
             <a href="{{ route('merchant.dashboard') }}" class="flex items-center gap-2">
