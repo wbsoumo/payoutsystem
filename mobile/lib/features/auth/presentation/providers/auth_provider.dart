@@ -71,36 +71,65 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true);
-    await Future.delayed(const Duration(milliseconds: 500));
     
-    if (email.contains('@') && password.length >= 6) {
-      await _secureStorage.write(key: 'session_token', value: 'session_token_example');
-      
-      // Fetch server PIN config
-      bool serverHasPin = false;
-      try {
-        final client = ApiClient();
-        final response = await client.dio.get('/wallet/balance');
-        if (response.data['success'] == true) {
-          serverHasPin = response.data['has_set_pin'] == true;
-          if (serverHasPin) {
-            await _secureStorage.write(key: 'transaction_pin', value: 'synced_from_server');
-          } else {
-            await _secureStorage.delete(key: 'transaction_pin');
-          }
-        }
-      } catch (e) {
-        final localPin = await _secureStorage.read(key: 'transaction_pin');
-        serverHasPin = localPin != null;
-      }
+    try {
+      final client = ApiClient();
+      final response = await client.dio.post('/auth/login', data: {
+        'email': email.trim(),
+        'password': password,
+      });
 
-      state = AuthState(
-        user: User(id: '1', name: 'Tony Stark', email: email, companyName: 'Stark Industries Ltd'),
-        hasSetPin: serverHasPin,
-      );
-      return true;
-    } else {
-      state = state.copyWith(isLoading: false, error: 'Invalid login details. Use password with at least 6 characters.');
+      if (response.data['success'] == true) {
+        final String apiKey = response.data['api_key'];
+        final String apiSecret = response.data['api_secret'];
+        final String merchantId = response.data['merchant_id'];
+        final userMap = response.data['user'] ?? {};
+
+        // Save session credentials securely
+        await _secureStorage.write(key: 'session_token', value: 'session_token_example');
+        await _secureStorage.write(key: 'api_key', value: apiKey);
+        await _secureStorage.write(key: 'api_secret', value: apiSecret);
+        await _secureStorage.write(key: 'merchant_id', value: merchantId);
+
+        // Fetch server PIN config
+        bool serverHasPin = false;
+        try {
+          final balanceClient = ApiClient();
+          final balanceResponse = await balanceClient.dio.get('/wallet/balance');
+          if (balanceResponse.data['success'] == true) {
+            serverHasPin = balanceResponse.data['has_set_pin'] == true;
+            if (serverHasPin) {
+              await _secureStorage.write(key: 'transaction_pin', value: 'synced_from_server');
+            } else {
+              await _secureStorage.delete(key: 'transaction_pin');
+            }
+          }
+        } catch (e) {
+          // Fallback to local pin status if offline/failed
+          final localPin = await _secureStorage.read(key: 'transaction_pin');
+          serverHasPin = localPin != null;
+        }
+
+        state = AuthState(
+          user: User(
+            id: userMap['id'] ?? '1', 
+            name: userMap['name'] ?? 'Tony Stark', 
+            email: userMap['email'] ?? email, 
+            companyName: userMap['company_name'] ?? 'Stark Industries Ltd'
+          ),
+          hasSetPin: serverHasPin,
+        );
+        return true;
+      } else {
+        state = state.copyWith(isLoading: false, error: response.data['error'] ?? 'Login failed');
+        return false;
+      }
+    } catch (e) {
+      String errMsg = 'Connection error. Please try again.';
+      if (e is DioException) {
+        errMsg = e.response?.data['error'] ?? errMsg;
+      }
+      state = state.copyWith(isLoading: false, error: errMsg);
       return false;
     }
   }

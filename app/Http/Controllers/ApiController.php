@@ -649,4 +649,54 @@ class ApiController extends Controller
             'message' => 'Notification preferences updated successfully.'
         ]);
     }
+
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
+        }
+
+        $user = \App\Models\MerchantUser::where('email', $request->email)->first();
+
+        if (!$user || !\Illuminate\Support\Facades\Hash::check($request->password, $user->password)) {
+            return response()->json(['success' => false, 'error' => 'Invalid email or password.'], 401);
+        }
+
+        if ($user->status !== 'active') {
+            return response()->json(['success' => false, 'error' => 'Account is suspended.'], 403);
+        }
+
+        $merchant = $user->merchant;
+
+        $key = 'nvx_pk_live_' . \Illuminate\Support\Str::random(32);
+        $secret = 'nvx_sk_live_' . \Illuminate\Support\Str::random(48);
+        
+        \App\Models\MerchantApiKey::create([
+            'merchant_id' => $merchant->id,
+            'name' => 'Mobile Session Key',
+            'api_key_hash' => hash('sha256', $key),
+            'api_key_preview' => substr($key, 0, 15) . '...' . substr($key, -4),
+            'secret_key_encrypted' => $secret,
+            'webhook_secret_encrypted' => 'whsec_' . \Illuminate\Support\Str::random(32),
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'merchant_id' => $merchant->id,
+            'api_key' => $key,
+            'api_secret' => $secret,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'company_name' => $merchant->company_name,
+            ]
+        ]);
+    }
 }

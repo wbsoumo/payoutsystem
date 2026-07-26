@@ -253,4 +253,30 @@ class ApiSignatureTest extends TestCase
                           'message' => 'Notification preferences updated successfully.'
                       ]);
     }
+
+    public function test_auth_login()
+    {
+        $user = \App\Models\MerchantUser::create([
+            'merchant_id' => $this->merchant->id,
+            'name' => 'Soumojit Saha',
+            'email' => 'login_test@novexapay.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('secret123'),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'email' => 'login_test@novexapay.com',
+            'password' => 'secret123',
+        ]);
+
+        $response->assertStatus(200)
+                 ->assertJsonFragment([
+                     'success' => true,
+                     'merchant_id' => $this->merchant->id,
+                 ]);
+
+        $this->assertDatabaseHas('merchant_api_keys', [
+            'merchant_id' => $this->merchant->id,
+            'name' => 'Mobile Session Key',
+        ]);
+    }
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\ApiController;
 */
 
 Route::get('/v1/logo/{domain}', [ApiController::class, 'getCompanyLogo']);
+Route::post('/v1/auth/login', [ApiController::class, 'login']);
 
 Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
     Route::get('/wallet/balance', [ApiController::class, 'getBalance']);
