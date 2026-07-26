@@ -90,4 +90,58 @@ class MerchantService
             return $merchant;
         });
     }
+
+    public function createMerchantDirectly(array $data, ?string $adminId = null): Merchant
+    {
+        return DB::transaction(function () use ($data, $adminId) {
+            // 1. Create Merchant
+            $merchant = Merchant::create([
+                'company_name' => $data['company_name'],
+                'business_name' => $data['business_name'],
+                'business_type' => $data['business_type'] ?? 'other',
+                'website' => $data['website'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'email' => $data['email'],
+                'country' => $data['country'] ?? 'IN',
+                'monthly_volume' => $data['monthly_volume'] ?? '0',
+                'status' => 'active', 
+                'kyc_status' => 'approved', 
+            ]);
+
+            // 2. Create Profile
+            MerchantProfile::create([
+                'merchant_id' => $merchant->id,
+                'address_line1' => $data['country'] ?? 'IN',
+            ]);
+
+            // 3. Create Wallet
+            Wallet::create([
+                'merchant_id' => $merchant->id,
+                'balance' => 0.0000,
+                'frozen_balance' => 0.0000,
+                'currency' => 'INR',
+            ]);
+
+            // 4. Create Merchant User
+            $merchantUser = MerchantUser::create([
+                'merchant_id' => $merchant->id,
+                'name' => $data['user_name'],
+                'email' => $data['user_email'],
+                'password' => Hash::make($data['user_password']),
+                'status' => 'active',
+            ]);
+
+            // Log Admin activity
+            $this->auditLogService->log(
+                'admin',
+                $adminId,
+                $merchant->id,
+                'merchant_created_directly',
+                "Created merchant account directly. User: {$data['user_email']}",
+                ['merchant_id' => $merchant->id, 'email' => $data['email']]
+            );
+
+            return $merchant;
+        });
+    }
 }

@@ -6,9 +6,17 @@
 <div class="space-y-6">
 
     <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
-        <div>
-            <h1 class="text-xl font-bold text-slate-900">Merchants Accounts</h1>
-            <p class="text-xs text-slate-500">Monitor and inspect active, pending, or suspended business entity profiles.</p>
+        <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Merchants Accounts</h1>
+                <p class="text-xs text-slate-500">Monitor and inspect active, pending, or suspended business entity profiles.</p>
+            </div>
+            <div>
+                <a href="{{ route('admin.merchants.create') }}" 
+                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-xs transition-colors inline-flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Create Merchant Account
+                </a>
+            </div>
         </div>
 
         <div class="overflow-x-auto">

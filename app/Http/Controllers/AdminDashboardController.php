@@ -522,6 +522,43 @@ class AdminDashboardController extends Controller
         return view('admin.reports.index', compact(
             'totalVolume', 'totalCommissions', 'successCount', 'failedCount', 'pendingCount', 'merchantRankings'
         ));
+     }
+
+    public function merchantCreateForm()
+    {
+        return view('admin.merchants.create');
+    }
+
+    public function merchantStore(Request $request)
+    {
+        $request->validate([
+            'company_name' => 'required|string|max:255',
+            'business_name' => 'required|string|max:255',
+            'business_type' => 'required|string|max:100',
+            'email' => 'required|email|max:255|unique:merchants,email',
+            'phone' => 'required|string|max:20',
+            'website' => 'nullable|url|max:255',
+            'user_name' => 'required|string|max:255',
+            'user_email' => 'required|email|max:255|unique:merchant_users,email',
+            'user_password' => 'required|string|min:8',
+        ]);
+
+        $admin = $this->getAdmin();
+
+        $merchant = $this->merchantService->createMerchantDirectly([
+            'company_name' => $request->company_name,
+            'business_name' => $request->business_name,
+            'business_type' => $request->business_type,
+            'email' => $request->email,
+            'phone' => $request->phone,
+            'website' => $request->website,
+            'user_name' => $request->user_name,
+            'user_email' => $request->user_email,
+            'user_password' => $request->user_password,
+        ], $admin->id ?? null);
+
+        return redirect()->route('admin.merchants.view', $merchant->id)
+            ->with('success', 'Merchant account created successfully.');
     }
 }
 

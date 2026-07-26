@@ -108,6 +108,8 @@ Route::group(['prefix' => 'admin'], function () {
         Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('admin.dashboard');
         
         // Merchants Directory
+        Route::get('/merchants/create', [AdminDashboardController::class, 'merchantCreateForm'])->name('admin.merchants.create');
+        Route::post('/merchants/store', [AdminDashboardController::class, 'merchantStore'])->name('admin.merchants.store');
         Route::get('/merchants', [AdminDashboardController::class, 'merchants'])->name('admin.merchants');
         Route::get('/merchants/{id}', [AdminDashboardController::class, 'merchantView'])->name('admin.merchants.view');
         Route::post('/merchants/{id}/status', [AdminDashboardController::class, 'merchantStatusUpdate'])->name('admin.merchants.status');
