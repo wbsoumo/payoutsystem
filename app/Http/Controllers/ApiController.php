@@ -32,6 +32,11 @@ class ApiController extends Controller
         $merchant = $request->get('merchant'); // Attached by ApiSignatureMiddleware
         $wallet = $merchant->wallet;
         $globalUpiId = \App\Models\Setting::get('deposit_upi_id', 'novexapay@yesbank');
+        
+        $upiId = $merchant->deposit_upi_id;
+        if (empty($upiId) || $upiId === 'novexapay@yesbank') {
+            $upiId = $globalUpiId;
+        }
 
         return response()->json([
             'success' => true,
@@ -40,7 +45,7 @@ class ApiController extends Controller
             'currency' => $wallet->currency,
             'logo_dev_api_key' => \App\Models\Setting::get('logo_dev_api_key', ''),
             'has_set_pin' => !empty($merchant->transaction_pin),
-            'deposit_upi_id' => $merchant->deposit_upi_id ?? $globalUpiId,
+            'deposit_upi_id' => $upiId,
         ]);
     }
 
