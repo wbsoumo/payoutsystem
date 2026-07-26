@@ -22,6 +22,10 @@ Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
     Route::get('/payouts', [ApiController::class, 'getPayouts']);
     Route::get('/payouts/{reference_id}', [ApiController::class, 'getPayout']);
 
+    Route::get('/beneficiaries', [ApiController::class, 'getBeneficiaries']);
+    Route::post('/beneficiaries', [ApiController::class, 'createBeneficiary']);
+    Route::delete('/beneficiaries/{id}', [ApiController::class, 'deleteBeneficiary']);
+
     // Transaction PIN Management
     Route::post('/pin/setup', [ApiController::class, 'setupPin']);
     Route::post('/pin/verify', [ApiController::class, 'verifyPin']);

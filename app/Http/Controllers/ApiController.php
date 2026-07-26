@@ -420,4 +420,91 @@ class ApiController extends Controller
 
         return response()->json(['success' => true, 'message' => 'Transaction PIN reset successfully.']);
     }
+
+    public function getBeneficiaries(Request $request)
+    {
+        $merchant = $request->get('merchant');
+        $beneficiaries = $merchant->beneficiaries()
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'beneficiaries' => $beneficiaries->map(function ($b) {
+                return [
+                    'id' => $b->id,
+                    'name' => $b->name,
+                    'bank' => $b->bank_name,
+                    'account' => $b->account_number,
+                    'ifsc' => $b->ifsc,
+                    'logo' => $b->logo_url,
+                ];
+            })
+        ]);
+    }
+
+    public function createBeneficiary(Request $request)
+    {
+        $merchant = $request->get('merchant');
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'bank_name' => 'required|string|max:255',
+            'account_number' => 'required|string|max:30',
+            'ifsc' => 'required|string|max:11',
+            'logo_url' => 'nullable|string|max:500',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        // Check if beneficiary already exists for this merchant
+        $existing = $merchant->beneficiaries()
+            ->where('account_number', $request->account_number)
+            ->where('ifsc', $request->ifsc)
+            ->first();
+
+        if ($existing) {
+            return response()->json(['success' => false, 'error' => 'Beneficiary already registered.'], 400);
+        }
+
+        $beneficiary = $merchant->beneficiaries()->create([
+            'name' => $request->name,
+            'bank_name' => $request->bank_name,
+            'account_number' => $request->account_number,
+            'ifsc' => $request->ifsc,
+            'logo_url' => $request->logo_url,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Beneficiary saved successfully.',
+            'beneficiary' => [
+                'id' => $beneficiary->id,
+                'name' => $beneficiary->name,
+                'bank' => $beneficiary->bank_name,
+                'account' => $beneficiary->account_number,
+                'ifsc' => $beneficiary->ifsc,
+                'logo' => $beneficiary->logo_url,
+            ]
+        ]);
+    }
+
+    public function deleteBeneficiary(Request $request, $id)
+    {
+        $merchant = $request->get('merchant');
+        $beneficiary = $merchant->beneficiaries()->find($id);
+
+        if (!$beneficiary) {
+            return response()->json(['success' => false, 'error' => 'Beneficiary not found.'], 404);
+        }
+
+        $beneficiary->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Beneficiary deleted successfully.'
+        ]);
+    }
 }

@@ -68,4 +68,9 @@ class Merchant extends Model
     {
         return $this->hasMany(Commission::class, 'merchant_id');
     }
+
+    public function beneficiaries()
+    {
+        return $this->hasMany(MerchantBeneficiary::class, 'merchant_id');
+    }
 }

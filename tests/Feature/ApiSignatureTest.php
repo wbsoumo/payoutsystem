@@ -106,4 +106,57 @@ class ApiSignatureTest extends TestCase
                      'error' => 'API Key does not match the provided Merchant ID',
                  ]);
     }
+
+    public function test_beneficiaries_crud()
+    {
+        $headers = [
+            'x-api-key' => $this->apiKey,
+            'x-api-secret' => $this->secretKey,
+            'x-merchant-id' => $this->merchant->id,
+        ];
+
+        // 1. Create a beneficiary
+        $createResponse = $this->withHeaders($headers)->postJson('/api/v1/beneficiaries', [
+            'name' => 'Soumojit Saha',
+            'bank_name' => 'State Bank of India',
+            'account_number' => '999988887777',
+            'ifsc' => 'SBIN0003242',
+            'logo_url' => 'https://taskbazi.xyz/logo/sbi.co.in'
+        ]);
+
+        $createResponse->assertStatus(200)
+                       ->assertJsonFragment([
+                           'success' => true,
+                           'message' => 'Beneficiary saved successfully.'
+                       ]);
+
+        $this->assertDatabaseHas('merchant_beneficiaries', [
+            'merchant_id' => $this->merchant->id,
+            'name' => 'Soumojit Saha',
+            'account_number' => '999988887777'
+        ]);
+
+        // 2. Fetch beneficiaries
+        $getResponse = $this->withHeaders($headers)->getJson('/api/v1/beneficiaries');
+        $getResponse->assertStatus(200)
+                    ->assertJsonCount(1, 'beneficiaries')
+                    ->assertJsonFragment([
+                        'name' => 'Soumojit Saha',
+                        'account' => '999988887777'
+                    ]);
+
+        $beneficiaryId = $getResponse->json('beneficiaries.0.id');
+
+        // 3. Delete beneficiary
+        $deleteResponse = $this->withHeaders($headers)->deleteJson("/api/v1/beneficiaries/{$beneficiaryId}");
+        $deleteResponse->assertStatus(200)
+                       ->assertJsonFragment([
+                           'success' => true,
+                           'message' => 'Beneficiary deleted successfully.'
+                       ]);
+
+        $this->assertDatabaseMissing('merchant_beneficiaries', [
+            'id' => $beneficiaryId
+        ]);
+    }
 }
