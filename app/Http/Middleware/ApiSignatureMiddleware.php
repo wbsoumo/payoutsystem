@@ -22,30 +22,24 @@ class ApiSignatureMiddleware
         $startTime = microtime(true);
 
         $apiKey = $request->header('x-api-key');
-        $signature = $request->header('x-signature');
-        $timestamp = $request->header('x-timestamp');
-        $nonce = $request->header('x-nonce');
+        $apiSecret = $request->header('x-api-secret');
         $merchantId = $request->header('x-merchant-id');
 
-        if (!$apiKey || !$signature || !$timestamp || !$nonce || !$merchantId) {
+        if (!$apiKey || !$apiSecret || !$merchantId) {
             $responseContent = [
                 'success' => false,
-                'error' => 'Missing security headers (x-api-key, x-signature, x-timestamp, x-nonce, x-merchant-id required)',
+                'error' => 'Missing security headers (x-api-key, x-api-secret, x-merchant-id required)',
             ];
             
             $this->logApiCall($request, null, 400, $startTime, false, false, false, $responseContent);
             return response()->json($responseContent, 400);
         }
 
-        $requestBody = $request->getContent();
         $clientIp = $request->ip() ?? '127.0.0.1';
 
         $validation = $this->apiService->validateRequest(
             $apiKey,
-            $signature,
-            $timestamp,
-            $nonce,
-            $requestBody,
+            $apiSecret,
             $clientIp,
             $merchantId
         );
@@ -56,20 +50,14 @@ class ApiSignatureMiddleware
                 'error' => $validation['message'],
             ];
 
-            // Resolve which validations passed/failed
-            $tsVal = (abs(time() - (int)$timestamp) <= 300);
-            // Nonce and signature validation logs
-            $nonceVal = ($validation['message'] !== 'Replay attack detected (nonce reused)');
-            $sigVal = ($validation['message'] !== 'Invalid signature');
-
             $this->logApiCall(
                 $request,
                 $validation['merchant_id'],
                 $validation['code'],
                 $startTime,
-                $sigVal,
-                $tsVal,
-                $nonceVal,
+                false,
+                false,
+                false,
                 $responseContent
             );
 
@@ -83,7 +71,6 @@ class ApiSignatureMiddleware
         $response = $next($request);
 
         // Log successful API Call
-        $executionTimeMs = (int) ((microtime(true) - $startTime) * 1000);
         $this->logApiCall(
             $request,
             $validation['merchant_id'],

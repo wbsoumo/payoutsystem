@@ -42,10 +42,7 @@ class ApiService
 
     public function validateRequest(
         string $apiKey,
-        string $signature,
-        string $timestamp,
-        string $nonce,
-        string $requestBody,
+        string $apiSecret,
         string $clientIp,
         string $merchantId
     ): array {
@@ -79,26 +76,10 @@ class ApiService
             }
         }
 
-        // Timestamp Validation (5 minutes window)
-        $diff = abs(time() - (int) $timestamp);
-        if ($diff > 300) {
-            return ['status' => false, 'code' => 400, 'message' => 'Request expired (timestamp out of window)', 'merchant_id' => $merchant->id];
-        }
-
-        // Nonce Validation (Replay Protection)
-        $cacheKey = "nonce:{$merchant->id}:{$nonce}";
-        if (Cache::has($cacheKey)) {
-            return ['status' => false, 'code' => 400, 'message' => 'Replay attack detected (nonce reused)', 'merchant_id' => $merchant->id];
-        }
-        Cache::put($cacheKey, true, 300); // cache for 5 minutes
-
-        // Signature Validation (HMAC-SHA256)
-        $secretKey = $keyRecord->secret_key_encrypted; // Cast decrypts automatically
-        $stringToSign = $timestamp . '.' . $nonce . '.' . $requestBody;
-        $expectedSignature = hash_hmac('sha256', $stringToSign, $secretKey);
-
-        if (!hash_equals($expectedSignature, $signature)) {
-            return ['status' => false, 'code' => 401, 'message' => 'Invalid signature', 'merchant_id' => $merchant->id];
+        // Validate API Secret Key
+        $actualSecret = $keyRecord->secret_key_encrypted; // Cast decrypts automatically
+        if ($apiSecret !== $actualSecret) {
+            return ['status' => false, 'code' => 401, 'message' => 'Invalid API Secret Key', 'merchant_id' => $merchant->id];
         }
 
         return [

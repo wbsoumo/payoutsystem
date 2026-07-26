@@ -56,23 +56,17 @@ class ApiSignatureTest extends TestCase
     {
         $response = $this->getJson('/api/v1/wallet/balance');
         $response->assertStatus(400)
-                 ->assertJsonFragment(['success' => false]);
+                 ->assertJsonFragment([
+                     'success' => false,
+                     'error' => 'Missing security headers (x-api-key, x-api-secret, x-merchant-id required)'
+                 ]);
     }
 
-    public function test_api_verifies_valid_signature()
+    public function test_api_verifies_valid_credentials()
     {
-        $timestamp = (string) time();
-        $nonce = (string) Str::uuid();
-        $body = '[]'; // JSON request default body in tests
-
-        $stringToSign = $timestamp . '.' . $nonce . '.' . $body;
-        $signature = hash_hmac('sha256', $stringToSign, $this->secretKey);
-
         $response = $this->withHeaders([
             'x-api-key' => $this->apiKey,
-            'x-signature' => $signature,
-            'x-timestamp' => $timestamp,
-            'x-nonce' => $nonce,
+            'x-api-secret' => $this->secretKey,
             'x-merchant-id' => $this->merchant->id,
         ])->getJson('/api/v1/wallet/balance');
 
@@ -83,56 +77,33 @@ class ApiSignatureTest extends TestCase
                  ]);
     }
 
-    public function test_api_rejects_expired_timestamp()
+    public function test_api_rejects_invalid_secret()
     {
-        $timestamp = (string) (time() - 360); // 6 minutes old
-        $nonce = (string) Str::uuid();
-        $body = '[]';
-
-        $stringToSign = $timestamp . '.' . $nonce . '.' . $body;
-        $signature = hash_hmac('sha256', $stringToSign, $this->secretKey);
-
         $response = $this->withHeaders([
             'x-api-key' => $this->apiKey,
-            'x-signature' => $signature,
-            'x-timestamp' => $timestamp,
-            'x-nonce' => $nonce,
+            'x-api-secret' => 'invalid_secret_key_123',
             'x-merchant-id' => $this->merchant->id,
         ])->getJson('/api/v1/wallet/balance');
 
-        $response->assertStatus(400)
+        $response->assertStatus(401)
                  ->assertJsonFragment([
                      'success' => false,
-                     'error' => 'Request expired (timestamp out of window)',
+                     'error' => 'Invalid API Secret Key',
                  ]);
     }
 
-    public function test_api_rejects_replayed_nonce()
+    public function test_api_rejects_unmatched_merchant_id()
     {
-        $timestamp = (string) time();
-        $nonce = (string) Str::uuid();
-        $body = '[]';
-
-        $stringToSign = $timestamp . '.' . $nonce . '.' . $body;
-        $signature = hash_hmac('sha256', $stringToSign, $this->secretKey);
-
-        $headers = [
+        $response = $this->withHeaders([
             'x-api-key' => $this->apiKey,
-            'x-signature' => $signature,
-            'x-timestamp' => $timestamp,
-            'x-nonce' => $nonce,
-            'x-merchant-id' => $this->merchant->id,
-        ];
+            'x-api-secret' => $this->secretKey,
+            'x-merchant-id' => '019f9dc9-a3aa-7076-b865-1f4ca42e790d', // Unmatched ID
+        ])->getJson('/api/v1/wallet/balance');
 
-        // First request succeeds
-        $this->withHeaders($headers)->getJson('/api/v1/wallet/balance')->assertStatus(200);
-
-        // Replayed request fails
-        $response = $this->withHeaders($headers)->getJson('/api/v1/wallet/balance');
-        $response->assertStatus(400)
+        $response->assertStatus(401)
                  ->assertJsonFragment([
                      'success' => false,
-                     'error' => 'Replay attack detected (nonce reused)',
+                     'error' => 'API Key does not match the provided Merchant ID',
                  ]);
     }
 }
