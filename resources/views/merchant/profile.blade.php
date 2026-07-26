@@ -5,6 +5,14 @@
 @section('content')
 <div class="grid lg:grid-cols-12 gap-8">
 
+    @if($errors->any())
+        <div class="lg:col-span-12">
+            <div class="p-4 bg-red-50 text-red-700 text-xs font-semibold rounded-2xl border border-red-100">
+                {{ $errors->first() }}
+            </div>
+        </div>
+    @endif
+
     <!-- Profile Settings Forms -->
     <div class="lg:col-span-8 space-y-6">
         

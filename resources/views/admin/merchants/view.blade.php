@@ -5,6 +5,12 @@
 @section('content')
 <div class="space-y-6">
 
+    @if($errors->any())
+        <div class="p-4 bg-red-50 text-red-700 text-xs font-semibold rounded-2xl border border-red-100 mb-4">
+            {{ $errors->first() }}
+        </div>
+    @endif
+
     @if($merchant->kyc_status === 'submitted')
         <div class="p-6 bg-yellow-50/80 border border-yellow-200 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-sm">
             <div class="space-y-1">

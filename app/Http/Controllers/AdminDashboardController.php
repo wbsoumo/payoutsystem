@@ -334,7 +334,7 @@ class AdminDashboardController extends Controller
     public function changeMerchantUserPassword(Request $request, string $merchantUserId)
     {
         $request->validate([
-            'password' => 'required|string|min:8|confirmed',
+            'password' => 'required|string|min:6|confirmed',
         ]);
 
         $user = \App\Models\MerchantUser::findOrFail($merchantUserId);
