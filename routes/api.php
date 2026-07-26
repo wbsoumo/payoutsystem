@@ -28,6 +28,11 @@ Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
 
     Route::get('/notifications', [ApiController::class, 'getNotifications']);
 
+    Route::get('/profile', [ApiController::class, 'getProfileDetails']);
+    Route::post('/profile/update', [ApiController::class, 'updateProfileDetails']);
+    Route::post('/profile/password', [ApiController::class, 'updatePassword']);
+    Route::post('/profile/notifications', [ApiController::class, 'updateNotifications']);
+
     // Transaction PIN Management
     Route::post('/pin/setup', [ApiController::class, 'setupPin']);
     Route::post('/pin/verify', [ApiController::class, 'verifyPin']);

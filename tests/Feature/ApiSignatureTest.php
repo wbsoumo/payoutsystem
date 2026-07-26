@@ -184,4 +184,73 @@ class ApiSignatureTest extends TestCase
                  ])
                  ->assertJsonCount(1, 'notifications');
     }
+
+    public function test_profile_endpoints()
+    {
+        $user = \App\Models\MerchantUser::create([
+            'merchant_id' => $this->merchant->id,
+            'name' => 'Soumojit Saha',
+            'email' => 'soumojit@novexapay.com',
+            'password' => \Illuminate\Support\Facades\Hash::make('secret123'),
+        ]);
+
+        $profile = \App\Models\MerchantProfile::create([
+            'merchant_id' => $this->merchant->id,
+            'gst' => '27AAACS1234A1Z1',
+            'pan' => 'AAACS1234A',
+            'bank_name' => 'State Bank of India',
+            'bank_account_number' => '1234567890',
+            'bank_ifsc' => 'SBIN0001020',
+            'bank_holder_name' => 'Soumojit Saha',
+        ]);
+
+        $headers = [
+            'x-api-key' => $this->apiKey,
+            'x-api-secret' => $this->secretKey,
+            'x-merchant-id' => $this->merchant->id,
+        ];
+
+        // 1. Get profile details
+        $getResponse = $this->withHeaders($headers)->getJson('/api/v1/profile');
+        $getResponse->assertStatus(200)
+                    ->assertJsonFragment([
+                        'success' => true,
+                        'name' => 'Soumojit Saha',
+                    ]);
+
+        // 2. Update profile details
+        $updateResponse = $this->withHeaders($headers)->postJson('/api/v1/profile/update', [
+            'name' => 'Soumojit Edited',
+            'email' => 'edited@novexapay.com',
+            'phone' => '+919999888877',
+        ]);
+        $updateResponse->assertStatus(200)
+                       ->assertJsonFragment([
+                           'success' => true,
+                           'message' => 'Profile updated successfully.'
+                       ]);
+
+        // 3. Update password
+        $passwordResponse = $this->withHeaders($headers)->postJson('/api/v1/profile/password', [
+            'current_password' => 'secret123',
+            'new_password' => 'newsecret123',
+        ]);
+        $passwordResponse->assertStatus(200)
+                         ->assertJsonFragment([
+                             'success' => true,
+                             'message' => 'Password changed successfully.'
+                         ]);
+
+        // 4. Update notifications
+        $notifResponse = $this->withHeaders($headers)->postJson('/api/v1/profile/notifications', [
+            'email' => false,
+            'push' => true,
+            'sms' => true,
+        ]);
+        $notifResponse->assertStatus(200)
+                      ->assertJsonFragment([
+                          'success' => true,
+                          'message' => 'Notification preferences updated successfully.'
+                      ]);
+    }
 }

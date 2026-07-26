@@ -539,4 +539,114 @@ class ApiController extends Controller
             'notifications' => $logs
         ]);
     }
+
+    public function getProfileDetails(Request $request)
+    {
+        $merchant = $request->get('merchant');
+        $user = $merchant->users()->first();
+        $profile = $merchant->profile;
+
+        $prefsJson = \App\Models\Setting::get('merchant_prefs_' . $merchant->id, '{}');
+        $prefs = json_decode($prefsJson, true);
+
+        return response()->json([
+            'success' => true,
+            'profile' => [
+                'name' => $user->name ?? '',
+                'email' => $user->email ?? '',
+                'phone' => $merchant->phone ?? '',
+                'company_name' => $merchant->company_name ?? '',
+                'business_type' => $merchant->business_type ?? '',
+                'website' => $merchant->website ?? '',
+                'gstin' => $profile->gst ?? '',
+                'pan' => $profile->pan ?? '',
+                'bank_name' => $profile->bank_name ?? '',
+                'bank_account_number' => $profile->bank_account_number ?? '',
+                'bank_ifsc' => $profile->bank_ifsc ?? '',
+                'bank_holder_name' => $profile->bank_holder_name ?? '',
+                'kyc_status' => $merchant->kyc_status ?? 'pending',
+                'notifications' => [
+                    'email' => filter_var($prefs['email'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                    'push' => filter_var($prefs['push'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                    'sms' => filter_var($prefs['sms'] ?? false, FILTER_VALIDATE_BOOLEAN),
+                ]
+            ]
+        ]);
+    }
+
+    public function updateProfileDetails(Request $request)
+    {
+        $merchant = $request->get('merchant');
+        $user = $merchant->users()->first();
+
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:merchant_users,email,' . $user->id,
+            'phone' => 'required|string|max:20',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
+        }
+
+        $user->update([
+            'name' => $request->name,
+            'email' => $request->email,
+        ]);
+
+        $merchant->update([
+            'phone' => $request->phone,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated successfully.'
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $merchant = $request->get('merchant');
+        $user = $merchant->users()->first();
+
+        $validator = Validator::make($request->all(), [
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:6',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => $validator->errors()->first()], 422);
+        }
+
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json(['success' => false, 'error' => 'Current password is incorrect.'], 400);
+        }
+
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully.'
+        ]);
+    }
+
+    public function updateNotifications(Request $request)
+    {
+        $merchant = $request->get('merchant');
+
+        $prefs = [
+            'email' => filter_var($request->email, FILTER_VALIDATE_BOOLEAN),
+            'push' => filter_var($request->push, FILTER_VALIDATE_BOOLEAN),
+            'sms' => filter_var($request->sms, FILTER_VALIDATE_BOOLEAN),
+        ];
+
+        \App\Models\Setting::set('merchant_prefs_' . $merchant->id, json_encode($prefs));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification preferences updated successfully.'
+        ]);
+    }
 }

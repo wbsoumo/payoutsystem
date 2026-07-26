@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -175,14 +176,79 @@ class _FullPageWrapper extends StatelessWidget {
   }
 }
 
-// 1. Account Settings Page
-class _AccountSettingsPage extends StatelessWidget {
+// 1. Account Settings Page (CONNECT WITH SERVER)
+class _AccountSettingsPage extends StatefulWidget {
   const _AccountSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  State<_AccountSettingsPage> createState() => _AccountSettingsPageState();
+}
+
+class _AccountSettingsPageState extends State<_AccountSettingsPage> {
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/profile');
+      if (response.data['success'] == true) {
+        final profile = response.data['profile'] ?? {};
+        setState(() {
+          _nameController.text = profile['name'] ?? '';
+          _emailController.text = profile['email'] ?? '';
+          _phoneController.text = profile['phone'] ?? '';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateProfile() async {
+    setState(() => _isSaving = true);
+    final client = ApiClient();
+    try {
+      final response = await client.dio.post('/profile/update', data: {
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+      });
+      if (mounted) {
+        setState(() => _isSaving = false);
+        if (response.data['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Account updated successfully!'), backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update account details'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED)));
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -190,27 +256,33 @@ class _AccountSettingsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TextField(
-            controller: TextEditingController(text: 'Tony Stark'),
+            controller: _nameController,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: TextEditingController(text: 'tony@stark.com'),
+            controller: _emailController,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'Email Address', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 16),
           TextField(
-            controller: TextEditingController(text: '+91 9876543210'),
+            controller: _phoneController,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
-            child: const Text('Update Profile', style: TextStyle(color: Colors.white)),
+            onPressed: _isSaving ? null : _updateProfile,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isSaving 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Update Profile', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -218,9 +290,61 @@ class _AccountSettingsPage extends StatelessWidget {
   }
 }
 
-// 2. Change Password Page
-class _ChangePasswordPage extends StatelessWidget {
+// 2. Change Password Page (CONNECT WITH SERVER)
+class _ChangePasswordPage extends StatefulWidget {
   const _ChangePasswordPage({Key? key}) : super(key: key);
+
+  @override
+  State<_ChangePasswordPage> createState() => _ChangePasswordPageState();
+}
+
+class _ChangePasswordPageState extends State<_ChangePasswordPage> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _isSaving = false;
+
+  Future<void> _updatePassword() async {
+    final newPass = _newController.text.trim();
+    final confirmPass = _confirmController.text.trim();
+
+    if (newPass.isEmpty || confirmPass.isEmpty || _currentController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New passwords do not match'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+    final client = ApiClient();
+    try {
+      final response = await client.dio.post('/profile/password', data: {
+        'current_password': _currentController.text,
+        'new_password': newPass,
+      });
+      if (mounted) {
+        setState(() => _isSaving = false);
+        if (response.data['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password updated successfully!'), backgroundColor: Colors.green),
+          );
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password change failed. Please verify current password.'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -233,27 +357,36 @@ class _ChangePasswordPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           TextField(
+            controller: _currentController,
             obscureText: true,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'Current Password', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 16),
           TextField(
+            controller: _newController,
             obscureText: true,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'New Password', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 16),
           TextField(
+            controller: _confirmController,
             obscureText: true,
             style: TextStyle(color: textColor),
             decoration: const InputDecoration(labelText: 'Confirm Password', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
-            child: const Text('Change Password', style: TextStyle(color: Colors.white)),
+            onPressed: _isSaving ? null : _updatePassword,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF7C3AED),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: _isSaving
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                : const Text('Change Password', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           )
         ],
       ),
@@ -355,10 +488,14 @@ class _ChangePinPageState extends ConsumerState<_ChangePinPage> {
                         }
                       }
                     },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
               child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Change PIN', style: TextStyle(color: Colors.white)),
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Change PIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -409,7 +546,7 @@ class _BiometricLoginPageState extends State<_BiometricLoginPage> {
   }
 }
 
-// 5. Notifications Settings Page
+// 5. Notifications Settings Page (CONNECT WITH SERVER)
 class _NotificationsSettingsPage extends StatefulWidget {
   const _NotificationsSettingsPage({Key? key}) : super(key: key);
 
@@ -421,11 +558,58 @@ class _NotificationsSettingsPageState extends State<_NotificationsSettingsPage> 
   bool _email = true;
   bool _push = true;
   bool _sms = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotificationPreferences();
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/profile');
+      if (response.data['success'] == true) {
+        final notifications = response.data['profile']['notifications'] ?? {};
+        setState(() {
+          _email = notifications['email'] ?? true;
+          _push = notifications['push'] ?? true;
+          _sms = notifications['sms'] ?? false;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _savePreferences() async {
+    final client = ApiClient();
+    try {
+      await client.dio.post('/profile/notifications', data: {
+        'email': _email,
+        'push': _push,
+        'sms': _sms,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preferences saved successfully!'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save notification preferences'), backgroundColor: Colors.red),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED)));
+    }
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -437,19 +621,28 @@ class _NotificationsSettingsPageState extends State<_NotificationsSettingsPage> 
               SwitchListTile(
                 title: const Text('Email Alerts'),
                 value: _email,
-                onChanged: (val) => setState(() => _email = val),
+                onChanged: (val) {
+                  setState(() => _email = val);
+                  _savePreferences();
+                },
               ),
               const Divider(height: 1),
               SwitchListTile(
                 title: const Text('Push Notifications'),
                 value: _push,
-                onChanged: (val) => setState(() => _push = val),
+                onChanged: (val) {
+                  setState(() => _push = val);
+                  _savePreferences();
+                },
               ),
               const Divider(height: 1),
               SwitchListTile(
                 title: const Text('SMS Transactions'),
                 value: _sms,
-                onChanged: (val) => setState(() => _sms = val),
+                onChanged: (val) {
+                  setState(() => _sms = val);
+                  _savePreferences();
+                },
               ),
             ],
           ),
