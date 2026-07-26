@@ -265,6 +265,24 @@ class MerchantDashboardController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+    public function deleteApiKey(string $id)
+    {
+        $merchant = $this->getMerchant();
+        $key = \App\Models\MerchantApiKey::where('merchant_id', $merchant->id)->findOrFail($id);
+        $key->update(['is_active' => false]);
+        $key->delete(); // Soft delete
+
+        $this->auditLogService->log(
+            'merchant_user',
+            Auth::guard('merchant')->user()->id,
+            $merchant->id,
+            'api_key_revoked',
+            "Revoked and deleted production API key: {$key->name}."
+        );
+
+        return back()->with('success', 'API key deleted/revoked successfully.');
+    }
+
     public function addIpWhitelist(Request $request)
     {
         $request->validate([
