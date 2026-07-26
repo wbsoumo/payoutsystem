@@ -15,6 +15,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
   String _openingBalance = '₹0.00';
   String _closingBalance = '₹0.00';
   bool _isLoading = true;
+  String _selectedType = 'all'; // 'all', 'credit', 'debit'
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -47,13 +49,96 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
   }
 
+  Widget _buildFilterButton(String label, String typeKey) {
+    final isSelected = _selectedType == typeKey;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = const Color(0xFF2563EB); // Royal Blue
+    final borderColor = isDark ? const Color(0xFF2E3245) : const Color(0xFF0F172A);
+    final textColor = isSelected 
+        ? Colors.white 
+        : (isDark ? Colors.white : const Color(0xFF0F172A));
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedType = typeKey;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? activeColor : borderColor,
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected) ...[
+              const Icon(Icons.check, size: 14, color: Colors.white),
+              const SizedBox(width: 6),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF0F172A);
     final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+    final borderStyleColor = isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0);
+    final searchBgColor = isDark ? const Color(0xFF1E2235) : const Color(0xFFF1F5F9);
+    
+    // Dynamic styles for Opening/Closing Summary Box
+    final summaryCardBg = isDark ? const Color(0xFF1E293B) : const Color(0xFFEFF6FF);
+    final summaryTitleColor = isDark ? Colors.white70 : Colors.black54;
+    final summaryValColor = isDark ? Colors.white : Colors.black;
+
+    // Filtering & Searching Logic
+    final filtered = _ledgerLogs.where((l) {
+      final type = (l['type'] ?? '').toString().toLowerCase();
+      final desc = (l['desc'] ?? '').toString().toLowerCase();
+      
+      final isCredit = type == 'credit' || type == 'refund';
+      final matchesFilter = _selectedType == 'all' || 
+          (_selectedType == 'credit' && isCredit) ||
+          (_selectedType == 'debit' && !isCredit);
+          
+      final query = _searchQuery.toLowerCase();
+      final matchesSearch = desc.contains(query);
+      
+      return matchesFilter && matchesSearch;
+    }).toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Wallet Ledger logs', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Wallet Ledger logs',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        centerTitle: true,
+      ),
       body: _isLoading
           ? Center(
               child: Shimmer.fromColors(
@@ -83,93 +168,158 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(24),
                 child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Opening/Closing summary card
-                  Card(
-                    color: const Color(0xFFEFF6FF),
-                    child: Padding(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Opening/Closing summary card
+                    Container(
                       padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: summaryCardBg,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFBFDBFE)),
+                      ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text('Opening Balance', style: TextStyle(fontSize: 10, color: Colors.black54)),
-                              const SizedBox(height: 4),
-                              Text(_openingBalance, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+                              Text('Opening Balance', style: TextStyle(fontSize: 10, color: summaryTitleColor, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
+                              Text(_openingBalance, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: summaryValColor)),
                             ],
                           ),
-                          const Icon(Icons.arrow_forward, color: Colors.grey),
+                          Icon(Icons.arrow_forward, color: isDark ? Colors.white38 : Colors.grey, size: 20),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              const Text('Closing Balance', style: TextStyle(fontSize: 10, color: Colors.black54)),
-                              const SizedBox(height: 4),
-                              Text(_closingBalance, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF4361EE))),
+                              Text('Closing Balance', style: TextStyle(fontSize: 10, color: summaryTitleColor, fontWeight: FontWeight.w600)),
+                              const SizedBox(height: 6),
+                              Text(_closingBalance, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF4361EE))),
                             ],
                           ),
                         ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  const Text('JOURNAL TRANSACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  const SizedBox(height: 12),
-
-                  if (_ledgerLogs.isEmpty)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          children: [
-                            Icon(Icons.library_books_outlined, color: Colors.grey.shade400, size: 48),
-                            const SizedBox(height: 12),
-                            const Text('No ledger entries recorded yet.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
-                          ],
-                        ),
+                    // Search input
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: searchBgColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: borderStyleColor),
                       ),
-                    )
-                  else
-                    Card(
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _ledgerLogs.length,
-                        separatorBuilder: (context, index) => const Divider(height: 1),
-                        itemBuilder: (context, index) {
-                          final log = _ledgerLogs[index];
-                          final isCredit = log['type'] == 'credit' || log['type'] == 'refund';
-
-                          return ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                              child: Icon(
-                                isCredit ? Icons.add_circle_outline : Icons.remove_circle_outline,
-                                color: isCredit ? Colors.green : Colors.red,
-                                size: 20,
-                              ),
-                            ),
-                            title: Text(log['desc'] ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                            subtitle: Text('Bal: ${log['bal']} • ${log['date']}', style: const TextStyle(fontSize: 10)),
-                            trailing: Text(
-                              '${isCredit ? '+' : '-'}${log['amount']}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: isCredit ? Colors.green : Colors.red,
-                              ),
-                            ),
-                          );
+                      child: TextField(
+                        style: TextStyle(color: textColor, fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: 'Search by reference ID or description...',
+                          hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                          prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 18),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, color: Colors.grey, size: 16),
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val;
+                          });
                         },
                       ),
                     ),
-                ],
+
+                    // Filter Buttons
+                    Row(
+                      children: [
+                        _buildFilterButton('All Logs', 'all'),
+                        const SizedBox(width: 8),
+                        _buildFilterButton('Credits (+)', 'credit'),
+                        const SizedBox(width: 8),
+                        _buildFilterButton('Debits (-)', 'debit'),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    Text('JOURNAL TRANSACTIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: isDark ? Colors.white30 : Colors.grey)),
+                    const SizedBox(height: 12),
+
+                    if (filtered.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(32),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderStyleColor),
+                        ),
+                        child: Column(
+                          children: [
+                            Icon(Icons.library_books_outlined, color: isDark ? Colors.white10 : Colors.grey.shade300, size: 48),
+                            const SizedBox(height: 12),
+                            const Text('No matching ledger entries found.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.grey)),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: borderStyleColor),
+                        ),
+                        child: ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: filtered.length,
+                          separatorBuilder: (context, index) => Divider(height: 1, color: borderStyleColor),
+                          itemBuilder: (context, index) {
+                            final log = filtered[index];
+                            final isCredit = log['type'] == 'credit' || log['type'] == 'refund';
+
+                            return ListTile(
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                              leading: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: isCredit ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+                                child: Icon(
+                                  isCredit ? Icons.add : Icons.remove,
+                                  color: isCredit ? Colors.green : Colors.red,
+                                  size: 16,
+                                ),
+                              ),
+                              title: Text(
+                                log['desc'] ?? 'N/A', 
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)
+                              ),
+                              subtitle: Text(
+                                'Bal: ${log['bal']} • ${log['date']}', 
+                                style: const TextStyle(fontSize: 10, color: Colors.grey)
+                              ),
+                              trailing: Text(
+                                '${isCredit ? '+' : '-'}${log['amount']}',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isCredit ? Colors.green : Colors.red,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
-          ),
     );
   }
 }
