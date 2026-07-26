@@ -230,6 +230,41 @@ class MerchantDashboardController extends Controller
         ]);
     }
 
+    public function downloadApiKeys()
+    {
+        $apiKey = session('api_key');
+        $secretKey = session('secret_key');
+        $webhookSecret = session('webhook_secret');
+
+        if (!$apiKey || !$secretKey) {
+            return redirect()->route('merchant.api-docs')->withErrors(['download' => 'No active session credentials found to download.']);
+        }
+
+        // Reflash the keys so they stay in the session
+        session()->keep(['api_key', 'secret_key', 'webhook_secret']);
+
+        $headers = [
+            'Content-type'        => 'text/csv',
+            'Content-Disposition' => 'attachment; filename=novexapay_api_credentials.csv',
+            'Pragma'              => 'no-cache',
+            'Cache-Control'       => 'must-revalidate, post-check=0, pre-check=0',
+            'Expires'             => '0'
+        ];
+
+        $columns = ['Credential Name', 'Value'];
+
+        $callback = function() use ($apiKey, $secretKey, $webhookSecret, $columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            fputcsv($file, ['Public Key (Client ID)', $apiKey]);
+            fputcsv($file, ['Secret Key (Client Secret)', $secretKey]);
+            fputcsv($file, ['Webhook Secret', $webhookSecret]);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
     public function addIpWhitelist(Request $request)
     {
         $request->validate([

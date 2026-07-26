@@ -66,6 +66,7 @@ Route::group(['prefix' => 'merchant'], function () {
         // DEVELOPER
         Route::get('/api-docs', [MerchantDashboardController::class, 'apiDocs'])->name('merchant.api-docs');
         Route::post('/api-keys/generate', [MerchantDashboardController::class, 'generateApiKeys'])->name('merchant.api-keys.generate');
+        Route::get('/api-keys/download', [MerchantDashboardController::class, 'downloadApiKeys'])->name('merchant.api-keys.download');
         Route::post('/api-keys/ip', [MerchantDashboardController::class, 'addIpWhitelist'])->name('merchant.api-keys.ip.add');
         Route::delete('/api-keys/ip/{id}', [MerchantDashboardController::class, 'deleteIpWhitelist'])->name('merchant.api-keys.ip.delete');
         Route::post('/api-keys/ip/{id}/toggle', [MerchantDashboardController::class, 'toggleIpWhitelist'])->name('merchant.api-keys.ip.toggle');

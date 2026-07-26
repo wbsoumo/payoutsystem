@@ -48,6 +48,41 @@
             </div>
 
             <div class="space-y-4">
+                <!-- Newly Generated credentials output with Download CSV Option -->
+                @if(session('api_key'))
+                    <div class="p-6 bg-blue-50 border border-blue-200 rounded-2xl space-y-4">
+                        <div class="text-xs font-bold text-blue-700 uppercase tracking-wider flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <span><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-500 text-sm"></i> COPY AND STORE SAFELY! THIS WILL NOT BE SHOWN AGAIN.</span>
+                            <a href="{{ route('merchant.api-keys.download') }}" class="px-3.5 h-8 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold uppercase transition-colors shadow-sm inline-flex items-center gap-1">
+                                <i class="fa-solid fa-download"></i> Download CSV
+                            </a>
+                        </div>
+                        
+                        <div class="space-y-3 font-mono text-xs">
+                            <div>
+                                <span class="text-slate-400 font-bold block text-[10px]">API KEY (CLIENT ID)</span>
+                                <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100 mt-1 select-all font-semibold text-slate-800">
+                                    <code>{{ session('api_key') }}</code>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="text-slate-400 font-bold block text-[10px]">SECRET KEY (CLIENT SECRET)</span>
+                                <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100 mt-1 select-all font-semibold text-slate-800">
+                                    <code>{{ session('secret_key') }}</code>
+                                </div>
+                            </div>
+
+                            <div>
+                                <span class="text-slate-400 font-bold block text-[10px]">WEBHOOK SECRET</span>
+                                <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-slate-100 mt-1 select-all font-semibold text-slate-800">
+                                    <code>{{ session('webhook_secret') }}</code>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
                 @forelse($keys as $key)
                     <div class="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 space-y-3">
                         <div class="flex justify-between items-center">
@@ -57,12 +92,12 @@
                         <div class="grid md:grid-cols-2 gap-4 text-xs font-semibold">
                             <div>
                                 <span class="text-slate-400 block text-[9px] uppercase font-bold">Public Key (Client ID)</span>
-                                <span class="text-slate-800 font-mono select-all">{{ $key->public_key }}</span>
+                                <span class="text-slate-800 font-mono select-all">{{ $key->api_key_preview }}</span>
                             </div>
                             <div x-data="{ showSecret: false }">
                                 <span class="text-slate-400 block text-[9px] uppercase font-bold">Secret Key (Client Secret)</span>
                                 <div class="flex items-center gap-2">
-                                    <span class="text-slate-800 font-mono select-all truncate" x-text="showSecret ? '{{ $key->secret_key }}' : '••••••••••••••••••••••••••••••••'"></span>
+                                    <span class="text-slate-800 font-mono select-all truncate" x-text="showSecret ? '{{ $key->secret_key_encrypted }}' : '••••••••••••••••••••••••••••••••'"></span>
                                     <button @click="showSecret = !showSecret" class="text-slate-400 hover:text-slate-600"><i class="fa-solid" :class="showSecret ? 'fa-eye-slash' : 'fa-eye'"></i></button>
                                 </div>
                             </div>
