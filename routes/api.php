@@ -17,4 +17,10 @@ Route::group(['prefix' => 'v1', 'middleware' => 'api.signature'], function () {
     Route::get('/wallet/balance', [ApiController::class, 'getBalance']);
     Route::post('/payouts', [ApiController::class, 'createPayout']);
     Route::get('/payouts/{reference_id}', [ApiController::class, 'getPayout']);
+
+    // Transaction PIN Management
+    Route::post('/pin/setup', [ApiController::class, 'setupPin']);
+    Route::post('/pin/verify', [ApiController::class, 'verifyPin']);
+    Route::post('/pin/change', [ApiController::class, 'changePin']);
+    Route::post('/pin/reset', [ApiController::class, 'resetPin']);
 });

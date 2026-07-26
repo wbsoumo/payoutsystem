@@ -24,6 +24,14 @@ class Merchant extends Model
         'monthly_volume',
         'status',
         'kyc_status',
+        'transaction_pin',
+        'pin_failed_attempts',
+        'pin_locked_until',
+    ];
+
+    protected $casts = [
+        'transaction_pin' => 'hashed',
+        'pin_locked_until' => 'datetime',
     ];
 
     public function users()

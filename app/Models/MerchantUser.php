@@ -18,6 +18,9 @@ class MerchantUser extends Authenticatable
         'name',
         'email',
         'password',
+        'transaction_pin',
+        'pin_failed_attempts',
+        'pin_locked_until',
         'status',
         'two_factor_secret',
         'two_factor_recovery_codes',
@@ -28,6 +31,7 @@ class MerchantUser extends Authenticatable
 
     protected $hidden = [
         'password',
+        'transaction_pin',
         'remember_token',
         'two_factor_secret',
         'two_factor_recovery_codes',
@@ -35,6 +39,8 @@ class MerchantUser extends Authenticatable
 
     protected $casts = [
         'password' => 'hashed',
+        'transaction_pin' => 'hashed',
+        'pin_locked_until' => 'datetime',
         'two_factor_confirmed_at' => 'datetime',
         'otp_expires_at' => 'datetime',
     ];
