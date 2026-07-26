@@ -438,4 +438,86 @@ class AdminDashboardController extends Controller
 
         return back()->with('success', 'Merchant profile configurations updated successfully.');
     }
+
+    public function transactions(Request $request)
+    {
+        $query = \App\Models\Transaction::with('merchant');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('merchant_id')) {
+            $query->where('merchant_id', $request->merchant_id);
+        }
+
+        $transactions = $query->orderBy('created_at', 'desc')->paginate(20);
+        $merchants = \App\Models\Merchant::all();
+
+        return view('admin.transactions.index', compact('transactions', 'merchants'));
+    }
+
+    public function wallet(Request $request)
+    {
+        $ledgers = \App\Models\WalletLedger::with('wallet.merchant')
+            ->orderBy('created_at', 'desc')
+            ->paginate(15);
+
+        $settlements = \App\Models\MerchantSettlement::with('merchant')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $wallets = \App\Models\Wallet::with('merchant')->get();
+
+        return view('admin.wallet.index', compact('ledgers', 'settlements', 'wallets'));
+    }
+
+    public function updateSettlementStatus(Request $request, string $id)
+    {
+        $request->validate(['status' => 'required|in:pending,approved,rejected']);
+        $settlement = \App\Models\MerchantSettlement::findOrFail($id);
+        $oldStatus = $settlement->status;
+        $settlement->update(['status' => $request->status]);
+
+        $this->auditLogService->log(
+            'admin',
+            $this->getAdmin()->id,
+            $settlement->merchant_id,
+            'settlement_status_update',
+            "Settlement request #{$settlement->id} updated status from {$oldStatus} to {$request->status}."
+        );
+
+        return back()->with('success', "Settlement request updated successfully.");
+    }
+
+    public function apiManagement(Request $request)
+    {
+        $keys = \App\Models\MerchantApiKey::with('merchant')->orderBy('created_at', 'desc')->get();
+        $ips = \App\Models\MerchantIpWhitelist::with('merchant')->orderBy('created_at', 'desc')->get();
+        $apiLogs = \App\Models\ApiLog::with('merchant')->orderBy('created_at', 'desc')->take(20)->get();
+
+        return view('admin.api.index', compact('keys', 'ips', 'apiLogs'));
+    }
+
+    public function reports(Request $request)
+    {
+        $totalVolume = \App\Models\Transaction::where('status', 'success')->sum('amount');
+        $totalCommissions = \App\Models\Transaction::where('status', 'success')->sum('commission');
+        
+        $successCount = \App\Models\Transaction::where('status', 'success')->count();
+        $failedCount = \App\Models\Transaction::where('status', 'failed')->count();
+        $pendingCount = \App\Models\Transaction::where('status', 'pending')->count();
+        
+        $merchantRankings = \App\Models\Transaction::where('status', 'success')
+            ->selectRaw('merchant_id, sum(amount) as total_amount, count(id) as tx_count')
+            ->groupBy('merchant_id')
+            ->orderBy('total_amount', 'desc')
+            ->with('merchant')
+            ->take(5)
+            ->get();
+
+        return view('admin.reports.index', compact(
+            'totalVolume', 'totalCommissions', 'successCount', 'failedCount', 'pendingCount', 'merchantRankings'
+        ));
+    }
 }
+

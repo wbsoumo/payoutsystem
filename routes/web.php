@@ -135,6 +135,19 @@ Route::group(['prefix' => 'admin'], function () {
         Route::get('/logs/audit', [AdminDashboardController::class, 'auditLogs'])->name('admin.logs.audit');
         Route::get('/logs/api', [AdminDashboardController::class, 'apiLogs'])->name('admin.logs.api');
 
+        // Transactions
+        Route::get('/transactions', [AdminDashboardController::class, 'transactions'])->name('admin.transactions');
+
+        // Wallet Management
+        Route::get('/wallet', [AdminDashboardController::class, 'wallet'])->name('admin.wallet');
+        Route::post('/wallet/settlement/{id}/status', [AdminDashboardController::class, 'updateSettlementStatus'])->name('admin.wallet.settlement.status');
+
+        // API Management
+        Route::get('/api-management', [AdminDashboardController::class, 'apiManagement'])->name('admin.api');
+
+        // Reports & Analytics
+        Route::get('/reports', [AdminDashboardController::class, 'reports'])->name('admin.reports');
+
         // System Settings
         Route::get('/settings', [AdminDashboardController::class, 'settings'])->name('admin.settings');
         Route::post('/settings', [AdminDashboardController::class, 'settingsUpdate'])->name('admin.settings.update');

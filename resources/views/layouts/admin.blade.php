@@ -51,49 +51,82 @@
             </a>
 
             <!-- Navigation Links -->
-            <nav class="space-y-1">
-                <a href="{{ route('admin.dashboard') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.dashboard') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-chart-pie w-5"></i> Dashboard
-                </a>
+            <div class="space-y-6">
+                <!-- CORE SYSTEMS -->
+                <div class="space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-4">Core Systems</span>
+                    <nav class="space-y-1">
+                        <a href="{{ route('admin.dashboard') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.dashboard') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-chart-pie w-5 text-sm"></i> Dashboard
+                        </a>
+                        <a href="{{ route('admin.merchants') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.merchants*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-users w-5 text-sm"></i> Merchants
+                        </a>
+                        <a href="{{ route('admin.transactions') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.transactions*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-money-bill-transfer w-5 text-sm"></i> Transactions
+                        </a>
+                    </nav>
+                </div>
 
-                <a href="{{ route('admin.merchants') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.merchants*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-building-columns w-5"></i> Merchants
-                </a>
+                <!-- FINANCIALS -->
+                <div class="space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-4">Financial Engine</span>
+                    <nav class="space-y-1">
+                        <a href="{{ route('admin.wallet') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.wallet*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-wallet w-5 text-sm"></i> Wallet Management
+                        </a>
+                        <a href="{{ route('admin.commissions') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.commissions*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-percentage w-5 text-sm"></i> Commission
+                        </a>
+                    </nav>
+                </div>
 
-                <a href="{{ route('admin.commissions') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.commissions*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-sliders w-5"></i> Commission Engine
-                </a>
+                <!-- TECHNICAL -->
+                <div class="space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-4">Technical & Gateways</span>
+                    <nav class="space-y-1">
+                        <a href="{{ route('admin.api') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.api*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-server w-5 text-sm"></i> API Management
+                        </a>
+                        <a href="{{ route('admin.logs.audit') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.logs.audit*') || request()->routeIs('admin.logs.api*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-shield-halved w-5 text-sm"></i> Security & Audit
+                        </a>
+                    </nav>
+                </div>
 
-                <a href="{{ route('admin.enquiries') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.enquiries*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-user-plus w-5"></i> Enquiries Queue
-                </a>
+                <!-- HELP & INTEL -->
+                <div class="space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-4">Support & Intel</span>
+                    <nav class="space-y-1">
+                        <a href="{{ route('admin.tickets') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.tickets*') || request()->routeIs('admin.enquiries*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-regular fa-life-ring w-5 text-sm"></i> Support & Requests
+                        </a>
+                        <a href="{{ route('admin.reports') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.reports*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-chart-line w-5 text-sm"></i> Reports & Analytics
+                        </a>
+                    </nav>
+                </div>
 
-                <a href="{{ route('admin.tickets') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.tickets*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-regular fa-life-ring w-5"></i> Support Tickets
-                </a>
-
-                <div class="h-[1px] bg-slate-800 my-4"></div>
-
-                <a href="{{ route('admin.logs.audit') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.logs.audit') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-shield-halved w-5"></i> Audit Logs
-                </a>
-
-                <a href="{{ route('admin.logs.api') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.logs.api') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-receipt w-5"></i> API Gateway Logs
-                </a>
-
-                <a href="{{ route('admin.settings') }}" 
-                   class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.settings*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
-                    <i class="fa-solid fa-gear w-5"></i> System Settings
-                </a>
-            </nav>
+                <!-- SYSTEM CONFIG -->
+                <div class="space-y-2">
+                    <span class="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-4">System Settings</span>
+                    <nav class="space-y-1">
+                        <a href="{{ route('admin.settings') }}" 
+                           class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-semibold transition-all hover:bg-slate-800 hover:text-white {{ request()->routeIs('admin.settings*') ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/10' : '' }}">
+                            <i class="fa-solid fa-sliders w-5 text-sm"></i> Settings
+                        </a>
+                    </nav>
+                </div>
+            </div>
         </div>
 
         <!-- Logged user / Logout -->
