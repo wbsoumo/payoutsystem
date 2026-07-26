@@ -22,6 +22,24 @@
 
     <!-- API Keys Tab -->
     <div x-show="activeTab === 'keys'" class="space-y-8">
+        <!-- Merchant ID card -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-3">
+            <div>
+                <h3 class="font-bold text-slate-900 text-lg">Merchant Account Details</h3>
+                <p class="text-xs text-slate-500">Provide this Merchant ID along with your API credentials to authorize requests.</p>
+            </div>
+            <div class="p-4 border border-slate-100 rounded-2xl bg-slate-50/50 flex justify-between items-center text-xs">
+                <div>
+                    <span class="text-slate-400 block text-[9px] uppercase font-bold">Merchant ID (x-merchant-id)</span>
+                    <span class="text-slate-800 font-mono font-bold text-base select-all">{{ $merchant->id }}</span>
+                </div>
+                <button onclick="navigator.clipboard.writeText('{{ $merchant->id }}'); alert('Merchant ID copied!');" 
+                        class="px-4 py-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-bold rounded-lg transition-colors">
+                    <i class="fa-regular fa-copy mr-1"></i> Copy
+                </button>
+            </div>
+        </div>
+
         <!-- API Credentials Card -->
         <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
             <div>

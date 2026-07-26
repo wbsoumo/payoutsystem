@@ -25,11 +25,12 @@ class ApiSignatureMiddleware
         $signature = $request->header('x-signature');
         $timestamp = $request->header('x-timestamp');
         $nonce = $request->header('x-nonce');
+        $merchantId = $request->header('x-merchant-id');
 
-        if (!$apiKey || !$signature || !$timestamp || !$nonce) {
+        if (!$apiKey || !$signature || !$timestamp || !$nonce || !$merchantId) {
             $responseContent = [
                 'success' => false,
-                'error' => 'Missing security headers (x-api-key, x-signature, x-timestamp, x-nonce required)',
+                'error' => 'Missing security headers (x-api-key, x-signature, x-timestamp, x-nonce, x-merchant-id required)',
             ];
             
             $this->logApiCall($request, null, 400, $startTime, false, false, false, $responseContent);
@@ -45,7 +46,8 @@ class ApiSignatureMiddleware
             $timestamp,
             $nonce,
             $requestBody,
-            $clientIp
+            $clientIp,
+            $merchantId
         );
 
         if (!$validation['status']) {

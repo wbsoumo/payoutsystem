@@ -73,6 +73,7 @@ class ApiSignatureTest extends TestCase
             'x-signature' => $signature,
             'x-timestamp' => $timestamp,
             'x-nonce' => $nonce,
+            'x-merchant-id' => $this->merchant->id,
         ])->getJson('/api/v1/wallet/balance');
 
         $response->assertStatus(200)
@@ -96,6 +97,7 @@ class ApiSignatureTest extends TestCase
             'x-signature' => $signature,
             'x-timestamp' => $timestamp,
             'x-nonce' => $nonce,
+            'x-merchant-id' => $this->merchant->id,
         ])->getJson('/api/v1/wallet/balance');
 
         $response->assertStatus(400)
@@ -119,6 +121,7 @@ class ApiSignatureTest extends TestCase
             'x-signature' => $signature,
             'x-timestamp' => $timestamp,
             'x-nonce' => $nonce,
+            'x-merchant-id' => $this->merchant->id,
         ];
 
         // First request succeeds

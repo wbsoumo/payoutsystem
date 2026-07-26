@@ -46,7 +46,8 @@ class ApiService
         string $timestamp,
         string $nonce,
         string $requestBody,
-        string $clientIp
+        string $clientIp,
+        string $merchantId
     ): array {
         $apiKeyHash = hash('sha256', $apiKey);
         $keyRecord = MerchantApiKey::where('api_key_hash', $apiKeyHash)
@@ -55,6 +56,10 @@ class ApiService
 
         if (!$keyRecord) {
             return ['status' => false, 'code' => 401, 'message' => 'Invalid API Key', 'merchant_id' => null];
+        }
+
+        if ($keyRecord->merchant_id !== $merchantId) {
+            return ['status' => false, 'code' => 401, 'message' => 'API Key does not match the provided Merchant ID', 'merchant_id' => null];
         }
 
         $merchant = $keyRecord->merchant;
