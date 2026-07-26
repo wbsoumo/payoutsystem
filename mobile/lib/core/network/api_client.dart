@@ -15,9 +15,23 @@ class ApiClient {
     dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         // Retrieve credentials stored securely or use default configuration values
-        final apiKey = await _secureStorage.read(key: 'api_key') ?? 'nvx_pk_live_B13S1gJQ73anYvlS3JjAP2CVeCv1xjY5';
-        final apiSecret = await _secureStorage.read(key: 'api_secret') ?? 'nvx_sk_live_c5hdF5i8HSzQhY1KMjn7nqhpTkx8u9eUXNx2mO8TZhU4dJ6R';
-        final merchantId = await _secureStorage.read(key: 'merchant_id') ?? '019f9dc9-a3aa-7076-b865-1f4ca42e790c';
+        String? apiKey;
+        String? apiSecret;
+        String? merchantId;
+
+        try {
+          apiKey = await _secureStorage.read(key: 'api_key');
+          apiSecret = await _secureStorage.read(key: 'api_secret');
+          merchantId = await _secureStorage.read(key: 'merchant_id');
+        } catch (_) {
+          try {
+            await _secureStorage.deleteAll();
+          } catch (_) {}
+        }
+
+        apiKey ??= 'nvx_pk_live_B13S1gJQ73anYvlS3JjAP2CVeCv1xjY5';
+        apiSecret ??= 'nvx_sk_live_c5hdF5i8HSzQhY1KMjn7nqhpTkx8u9eUXNx2mO8TZhU4dJ6R';
+        merchantId ??= '019f9dc9-a3aa-7076-b865-1f4ca42e790c';
 
         options.headers['x-api-key'] = apiKey;
         options.headers['x-api-secret'] = apiSecret;

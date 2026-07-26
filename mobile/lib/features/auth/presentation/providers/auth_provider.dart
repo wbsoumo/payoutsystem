@@ -86,10 +86,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final userMap = response.data['user'] ?? {};
 
         // Save session credentials securely
-        await _secureStorage.write(key: 'session_token', value: 'session_token_example');
-        await _secureStorage.write(key: 'api_key', value: apiKey);
-        await _secureStorage.write(key: 'api_secret', value: apiSecret);
-        await _secureStorage.write(key: 'merchant_id', value: merchantId);
+        try {
+          await _secureStorage.write(key: 'session_token', value: 'session_token_example');
+          await _secureStorage.write(key: 'api_key', value: apiKey);
+          await _secureStorage.write(key: 'api_secret', value: apiSecret);
+          await _secureStorage.write(key: 'merchant_id', value: merchantId);
+        } catch (storageError) {
+          try {
+            await _secureStorage.deleteAll();
+            await _secureStorage.write(key: 'session_token', value: 'session_token_example');
+            await _secureStorage.write(key: 'api_key', value: apiKey);
+            await _secureStorage.write(key: 'api_secret', value: apiSecret);
+            await _secureStorage.write(key: 'merchant_id', value: merchantId);
+          } catch (_) {
+            // Keep going even if storage fails
+          }
+        }
 
         // Fetch server PIN config
         bool serverHasPin = false;
@@ -105,9 +117,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
             }
           }
         } catch (e) {
-          // Fallback to local pin status if offline/failed
-          final localPin = await _secureStorage.read(key: 'transaction_pin');
-          serverHasPin = localPin != null;
+          try {
+            final localPin = await _secureStorage.read(key: 'transaction_pin');
+            serverHasPin = localPin != null;
+          } catch (_) {}
         }
 
         state = AuthState(
@@ -121,13 +134,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
         );
         return true;
       } else {
-        state = state.copyWith(isLoading: false, error: response.data['error'] ?? 'Login failed');
+        final err = response.data is Map ? response.data['error'] : 'Login failed';
+        state = state.copyWith(isLoading: false, error: err);
         return false;
       }
     } catch (e) {
       String errMsg = 'Connection error. Please try again.';
       if (e is DioException) {
-        errMsg = e.response?.data['error'] ?? errMsg;
+        final resData = e.response?.data;
+        if (resData is Map) {
+          errMsg = resData['error']?.toString() ?? errMsg;
+        } else if (resData is String && resData.isNotEmpty) {
+          errMsg = resData.length > 100 ? resData.substring(0, 100) + '...' : resData;
+        }
       }
       state = state.copyWith(isLoading: false, error: errMsg);
       return false;
