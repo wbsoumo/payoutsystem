@@ -3,7 +3,7 @@
 @section('page_title', 'All Transactions')
 
 @section('content')
-<div class="space-y-6">
+<div x-data="{ showModal: false, selectedRequest: '', selectedResponse: '', refId: '' }" class="space-y-6">
     <!-- Filter form -->
     <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
         <form action="{{ route('admin.transactions') }}" method="GET" class="flex flex-wrap items-end gap-4">
@@ -53,6 +53,7 @@
                         <th class="py-4 px-6">Status</th>
                         <th class="py-4 px-6">Provider</th>
                         <th class="py-4 px-6">Date</th>
+                        <th class="py-4 px-6">Logs</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 font-medium text-slate-700">
@@ -76,10 +77,16 @@
                             </td>
                             <td class="py-4 px-6 text-slate-500 uppercase">{{ $t->provider_name ?? 'N/A' }}</td>
                             <td class="py-4 px-6 text-slate-400">{{ $t->created_at->format('M d, H:i') }}</td>
+                            <td class="py-4 px-6">
+                                <button @click="showModal = true; refId = '{{ $t->reference_id }}'; selectedRequest = {{ json_encode($t->api_request_payload) }}; selectedResponse = {{ json_encode($t->api_response_payload) }};"
+                                        class="px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 rounded-lg text-[9px] font-bold uppercase transition-all flex items-center gap-1">
+                                    <i class="fa-solid fa-code"></i> Payload
+                                </button>
+                            </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="py-8 px-6 text-center text-slate-400 font-semibold">No transactions found.</td>
+                            <td colspan="8" class="py-8 px-6 text-center text-slate-400 font-semibold">No transactions found.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -91,6 +98,38 @@
                 {{ $transactions->links() }}
             </div>
         @endif
+    </div>
+
+    <!-- Payload Inspect Modal -->
+    <div x-show="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" x-transition style="display: none;">
+        <div class="bg-white rounded-3xl max-w-4xl w-full p-6 shadow-2xl flex flex-col max-h-[85vh]" @click.away="showModal = false">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-100">
+                <div>
+                    <h3 class="font-bold text-slate-900 text-base">API Transaction Logs</h3>
+                    <p class="text-[10px] text-slate-500 font-mono font-bold mt-1">Reference ID: <span x-text="refId"></span></p>
+                </div>
+                <button @click="showModal = false" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 py-6 overflow-y-auto">
+                <div class="space-y-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-arrow-right-to-bracket mr-1"></i> API Request Payload (Client Side)</span>
+                    <pre class="bg-slate-900 text-green-400 p-4 rounded-2xl text-[10px] font-mono overflow-auto max-h-96" x-text="JSON.stringify(selectedRequest, null, 2) || 'No request payload recorded'"></pre>
+                </div>
+                <div class="space-y-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-arrow-right-from-bracket mr-1"></i> API Response Payload (Gateway Response)</span>
+                    <pre class="bg-slate-900 text-blue-400 p-4 rounded-2xl text-[10px] font-mono overflow-auto max-h-96" x-text="JSON.stringify(selectedResponse, null, 2) || 'No response payload recorded'"></pre>
+                </div>
+            </div>
+            
+            <div class="flex justify-end pt-4 border-t border-slate-100">
+                <button @click="showModal = false" class="px-5 h-10 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                    Close Details
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
