@@ -132,15 +132,15 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
 
                 if (enteredPin.length == 6) {
                   // Trigger validation automatically
-                  final isValid = await ref.read(authProvider.notifier).verifyPin(enteredPin);
-                  if (isValid) {
+                  final errorMsg = await ref.read(authProvider.notifier).verifyPin(enteredPin);
+                  if (errorMsg == null) {
                     Navigator.pop(context); // Close bottom sheet
                     _processPayout(amount);
                   } else {
                     HapticFeedback.vibrate();
                     setModalState(() {
                       enteredPin = '';
-                      validationError = 'Incorrect PIN! Please try again.';
+                      validationError = errorMsg;
                     });
                   }
                 }

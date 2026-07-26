@@ -38,6 +38,7 @@ class ApiController extends Controller
             'frozen_balance' => (float) $wallet->frozen_balance,
             'currency' => $wallet->currency,
             'logo_dev_api_key' => \App\Models\Setting::get('logo_dev_api_key', ''),
+            'has_set_pin' => !empty($merchant->transaction_pin),
         ]);
     }
 
@@ -237,7 +238,7 @@ class ApiController extends Controller
         }
 
         $merchant->update([
-            'transaction_pin' => $request->pin,
+            'transaction_pin' => Hash::make($request->pin),
             'pin_failed_attempts' => 0,
             'pin_locked_until' => null,
         ]);
@@ -309,7 +310,7 @@ class ApiController extends Controller
         }
 
         $merchant->update([
-            'transaction_pin' => $request->new_pin,
+            'transaction_pin' => Hash::make($request->new_pin),
             'pin_failed_attempts' => 0,
             'pin_locked_until' => null,
         ]);

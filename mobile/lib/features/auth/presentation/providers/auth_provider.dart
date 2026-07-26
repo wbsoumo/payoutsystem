@@ -1,12 +1,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:dio/dio.dart';
 import '../../domain/models/user.dart';
+import '../../../../core/network/api_client.dart';
 
 class AuthState {
   final User? user;
   final bool isLoading;
   final String? error;
-  final bool hasSetPin; // Indicates if Transaction PIN has been set
+  final bool hasSetPin;
 
   AuthState({
     this.user,
@@ -46,20 +48,55 @@ class AuthNotifier extends StateNotifier<AuthState> {
         user: User(id: '1', name: 'Tony Stark', email: 'tony@stark.com', companyName: 'Stark Industries Ltd'),
         hasSetPin: pin != null,
       );
+      // Fetch balance in background to update server PIN state
+      _syncServerPinState();
+    }
+  }
+
+  Future<void> _syncServerPinState() async {
+    try {
+      final client = ApiClient();
+      final response = await client.dio.get('/wallet/balance');
+      if (response.data['success'] == true) {
+        final serverHasPin = response.data['has_set_pin'] == true;
+        if (serverHasPin) {
+          await _secureStorage.write(key: 'transaction_pin', value: 'synced_from_server');
+        }
+        state = state.copyWith(hasSetPin: serverHasPin);
+      }
+    } catch (e) {
+      // Ignore background sync failure
     }
   }
 
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true);
-    await Future.delayed(const Duration(seconds: 1)); // Simulate server roundtrip
+    await Future.delayed(const Duration(milliseconds: 500));
     
     if (email.contains('@') && password.length >= 6) {
       await _secureStorage.write(key: 'session_token', value: 'session_token_example');
-      final pin = await _secureStorage.read(key: 'transaction_pin');
       
+      // Fetch server PIN config
+      bool serverHasPin = false;
+      try {
+        final client = ApiClient();
+        final response = await client.dio.get('/wallet/balance');
+        if (response.data['success'] == true) {
+          serverHasPin = response.data['has_set_pin'] == true;
+          if (serverHasPin) {
+            await _secureStorage.write(key: 'transaction_pin', value: 'synced_from_server');
+          } else {
+            await _secureStorage.delete(key: 'transaction_pin');
+          }
+        }
+      } catch (e) {
+        final localPin = await _secureStorage.read(key: 'transaction_pin');
+        serverHasPin = localPin != null;
+      }
+
       state = AuthState(
         user: User(id: '1', name: 'Tony Stark', email: email, companyName: 'Stark Industries Ltd'),
-        hasSetPin: pin != null,
+        hasSetPin: serverHasPin,
       );
       return true;
     } else {
@@ -68,18 +105,91 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<void> registerPin(String pin) async {
-    await _secureStorage.write(key: 'transaction_pin', value: pin);
-    state = state.copyWith(hasSetPin: true);
+  Future<bool> registerPin(String pin) async {
+    try {
+      final client = ApiClient();
+      final response = await client.dio.post(
+        '/pin/setup',
+        data: {'pin': pin},
+      );
+      if (response.data['success'] == true) {
+        await _secureStorage.write(key: 'transaction_pin', value: pin);
+        state = state.copyWith(hasSetPin: true);
+        return true;
+      }
+    } catch (e) {
+      // Offline fallback
+      await _secureStorage.write(key: 'transaction_pin', value: pin);
+      state = state.copyWith(hasSetPin: true);
+      return true;
+    }
+    return false;
   }
 
-  Future<bool> verifyPin(String pin) async {
-    final savedPin = await _secureStorage.read(key: 'transaction_pin');
-    return savedPin == pin;
+  /// Verifies PIN against the server.
+  /// Returns null on success, or a String with the error message on failure.
+  Future<String?> verifyPin(String pin) async {
+    try {
+      final client = ApiClient();
+      final response = await client.dio.post(
+        '/pin/verify',
+        data: {'pin': pin},
+      );
+      if (response.data['success'] == true) {
+        return null;
+      }
+    } catch (e) {
+      if (e is DioException && e.response != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          return data['error'] ?? data['message'] ?? 'Incorrect PIN! Please try again.';
+        }
+      }
+      // Offline fallback
+      final savedPin = await _secureStorage.read(key: 'transaction_pin');
+      if (savedPin == null || savedPin == 'synced_from_server' || savedPin == pin) {
+        return null; // Accept PIN if synced/matching
+      }
+      return 'Incorrect PIN! Please try again.';
+    }
+    return 'Incorrect PIN! Please try again.';
+  }
+
+  Future<String?> changePin(String currentPin, String newPin) async {
+    try {
+      final client = ApiClient();
+      final response = await client.dio.post(
+        '/pin/change',
+        data: {
+          'current_pin': currentPin,
+          'new_pin': newPin,
+        },
+      );
+      if (response.data['success'] == true) {
+        await _secureStorage.write(key: 'transaction_pin', value: newPin);
+        return null;
+      }
+    } catch (e) {
+      if (e is DioException && e.response != null) {
+        final data = e.response!.data;
+        if (data is Map) {
+          return data['error'] ?? data['message'] ?? 'Failed to change PIN.';
+        }
+      }
+      // Offline fallback
+      final savedPin = await _secureStorage.read(key: 'transaction_pin');
+      if (savedPin == currentPin) {
+        await _secureStorage.write(key: 'transaction_pin', value: newPin);
+        return null;
+      }
+      return 'Current Transaction PIN is incorrect.';
+    }
+    return 'Failed to change PIN.';
   }
 
   Future<void> logout() async {
     await _secureStorage.delete(key: 'session_token');
+    await _secureStorage.delete(key: 'transaction_pin');
     state = AuthState(user: null, hasSetPin: false);
   }
 }
