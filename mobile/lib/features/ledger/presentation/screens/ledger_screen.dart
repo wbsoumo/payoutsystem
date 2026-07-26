@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:dio/dio.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 import '../../../../core/network/api_client.dart';
 
 class LedgerScreen extends StatefulWidget {
@@ -17,6 +22,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
   bool _isLoading = true;
   String _selectedType = 'all'; // 'all', 'credit', 'debit'
   String _searchQuery = '';
+  
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   void initState() {
@@ -49,6 +57,73 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
   }
 
+  Future<void> _downloadLedgerCsv(List<Map<String, dynamic>> logs) async {
+    if (logs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No logs available to download.'), backgroundColor: Colors.amber),
+      );
+      return;
+    }
+
+    // Generate CSV content
+    StringBuffer csv = StringBuffer();
+    csv.writeln('Date,Description,Type,Amount,Balance');
+    for (final log in logs) {
+      csv.writeln('"${log['date']}","${log['desc']}","${log['type']}","${log['amount']}","${log['bal']}"');
+    }
+
+    HapticFeedback.mediumImpact();
+    if (kIsWeb) {
+      // For Web, share the string directly or show share dialog
+      await Share.share(csv.toString(), subject: 'Wallet Ledger Logs CSV');
+    } else {
+      // For Android, write to file and share
+      try {
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/ledger_logs.csv');
+        await file.writeAsString(csv.toString());
+        await Share.shareXFiles([XFile(file.path)], text: 'Wallet Ledger Logs');
+      } catch (e) {
+        await Share.share(csv.toString(), subject: 'Wallet Ledger Logs CSV');
+      }
+    }
+  }
+
+  Future<void> _selectStartDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked;
+      });
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+    );
+    if (picked != null) {
+      setState(() {
+        _endDate = picked;
+      });
+    }
+  }
+
+  void _clearDateFilter() {
+    setState(() {
+      _startDate = null;
+      _endDate = null;
+    });
+  }
+
   Widget _buildFilterButton(String label, String typeKey) {
     final isSelected = _selectedType == typeKey;
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -65,7 +140,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         });
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? activeColor : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
@@ -120,8 +195,28 @@ class _LedgerScreenState extends State<LedgerScreen> {
           
       final query = _searchQuery.toLowerCase();
       final matchesSearch = desc.contains(query);
+
+      // Date matching
+      bool matchesDate = true;
+      if (l['raw_date'] != null) {
+        try {
+          final logDate = DateTime.parse(l['raw_date']);
+          if (_startDate != null) {
+            final startOfDay = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+            if (logDate.isBefore(startOfDay)) {
+              matchesDate = false;
+            }
+          }
+          if (_endDate != null) {
+            final endOfDay = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+            if (logDate.isAfter(endOfDay)) {
+              matchesDate = false;
+            }
+          }
+        } catch (_) {}
+      }
       
-      return matchesFilter && matchesSearch;
+      return matchesFilter && matchesSearch && matchesDate;
     }).toList();
 
     return Scaffold(
@@ -138,6 +233,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
           style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.download, color: textColor),
+            tooltip: 'Export CSV',
+            onPressed: () => _downloadLedgerCsv(filtered),
+          ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -201,11 +303,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
 
                     // Search input
                     Container(
-                      margin: const EdgeInsets.only(bottom: 16),
+                      margin: const EdgeInsets.only(bottom: 12),
                       decoration: BoxDecoration(
                         color: searchBgColor,
                         borderRadius: BorderRadius.circular(14),
@@ -238,15 +340,90 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       ),
                     ),
 
+                    // Smooth Date Selector Row
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _selectStartDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: borderStyleColor),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _startDate == null 
+                                            ? 'Start Date' 
+                                            : '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}',
+                                        style: TextStyle(fontSize: 10, color: textColor, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: _selectEndDate,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: cardColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: borderStyleColor),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _endDate == null 
+                                            ? 'End Date' 
+                                            : '${_endDate!.year}-${_endDate!.month.toString().padLeft(2, '0')}-${_endDate!.day.toString().padLeft(2, '0')}',
+                                        style: TextStyle(fontSize: 10, color: textColor, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (_startDate != null || _endDate != null) ...[
+                            const SizedBox(width: 8),
+                            IconButton(
+                              onPressed: _clearDateFilter,
+                              icon: const Icon(Icons.clear, size: 18, color: Colors.redAccent),
+                              tooltip: 'Clear Date Filter',
+                            )
+                          ]
+                        ],
+                      ),
+                    ),
+
                     // Filter Buttons
-                    Row(
-                      children: [
-                        _buildFilterButton('All Logs', 'all'),
-                        const SizedBox(width: 8),
-                        _buildFilterButton('Credits (+)', 'credit'),
-                        const SizedBox(width: 8),
-                        _buildFilterButton('Debits (-)', 'debit'),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildFilterButton('All Logs', 'all'),
+                          const SizedBox(width: 8),
+                          _buildFilterButton('Credits (+)', 'credit'),
+                          const SizedBox(width: 8),
+                          _buildFilterButton('Debits (-)', 'debit'),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
 

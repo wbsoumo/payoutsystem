@@ -382,6 +382,7 @@ class ApiController extends Controller
                     'amount' => '₹' . number_format($l->amount, 2),
                     'desc' => $l->description,
                     'date' => $l->created_at->format('M d, H:i'),
+                    'raw_date' => $l->created_at->toIso8601String(),
                     'bal' => '₹' . number_format($l->closing_balance, 2),
                 ];
             });
