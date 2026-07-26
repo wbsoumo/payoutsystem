@@ -16,7 +16,7 @@ void main() {
     await tester.pumpAndSettle(const Duration(seconds: 3));
 
     // Verify that login page elements exist
-    expect(find.text('Novexapay'), findsOneWidget);
+    expect(find.text('NovexaPay'), findsOneWidget);
     expect(find.text('Login Securely'), findsOneWidget);
   });
 }
