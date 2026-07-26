@@ -19,6 +19,14 @@
         }
     </script>
     <style>
+        .btn-gradient {
+            background: linear-gradient(135deg, #4361ee 0%, #2b3ff2 100%);
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-gradient:hover {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
         .no-scrollbar::-webkit-scrollbar {
             display: none;
         }
