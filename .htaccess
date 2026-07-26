@@ -7,6 +7,11 @@
     # Route migration runner directly to public folder
     RewriteRule ^run_migration.php$ public/run_migration.php [L]
     
+    # If the requested path exists inside the public directory, rewrite to it directly
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -f [OR]
+    RewriteCond %{DOCUMENT_ROOT}/public/$1 -d
+    RewriteRule ^(.*)$ public/$1 [L]
+
     # Route all other requests to index.php if the file or folder doesn't exist
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
