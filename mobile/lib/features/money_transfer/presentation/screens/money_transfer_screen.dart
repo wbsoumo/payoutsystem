@@ -6,7 +6,6 @@ import 'package:dio/dio.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../beneficiaries/presentation/providers/beneficiary_provider.dart';
 import '../../../../core/network/api_client.dart';
-import '../../../../core/constants/endpoints.dart';
 
 class MoneyTransferScreen extends ConsumerStatefulWidget {
   final String? initialBeneficiaryName;
@@ -17,15 +16,25 @@ class MoneyTransferScreen extends ConsumerStatefulWidget {
 }
 
 class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
-  final _amountController = TextEditingController();
-  final _pinController = TextEditingController();
+  final _amountController = TextEditingController(text: '0.00');
+  Map<String, String>? _selectedBeneficiaryData;
+  String _selectedBeneficiary = '';
+  
+  String _availableBalance = '₹0.00';
+  bool _isLoadingBalance = true;
+  double _numAmount = 0.00;
 
   @override
   void initState() {
+    parentInitState();
     super.initState();
+  }
+
+  void parentInitState() {
+    _loadBalance();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final beneficiaries = ref.read(beneficiaryProvider);
       if (widget.initialBeneficiaryName != null) {
-        final beneficiaries = ref.read(beneficiaryProvider);
         for (final b in beneficiaries) {
           if (b['name'] == widget.initialBeneficiaryName) {
             setState(() {
@@ -36,27 +45,43 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
           }
         }
       }
+      
+      if (_selectedBeneficiaryData == null && beneficiaries.isNotEmpty) {
+        setState(() {
+          _selectedBeneficiaryData = Map<String, String>.from(beneficiaries.first);
+          _selectedBeneficiary = beneficiaries.first['name']!;
+        });
+      }
     });
   }
 
-  final Map<String, String> _bankDomains = {
-    'SBIN': 'sbi.co.in',
-    'HDFC': 'hdfcbank.com',
-    'ICIC': 'icicibank.com',
-    'UTIB': 'axisbank.com',
-    'BARB': 'bankofbaroda.in',
-    'PUNB': 'pnbindia.in',
-    'KKBK': 'kotak.com',
-    'YESB': 'yesbank.in',
-    'UBIN': 'unionbankofindia.co.in',
-    'CNRB': 'canarabank.com',
-    'IDIB': 'indianbank.in',
-  };
+  Future<void> _loadBalance() async {
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/wallet/balance');
+      if (response.data['success'] == true) {
+        final double bal = double.tryParse(response.data['balance'].toString()) ?? 0.00;
+        if (mounted) {
+          setState(() {
+            _availableBalance = '₹' + bal.toStringAsFixed(2);
+            _isLoadingBalance = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingBalance = false);
+      }
+    }
+  }
 
-  Map<String, String>? _selectedBeneficiaryData;
-  String _selectedBeneficiary = 'Vijay Kumar';
-  double _chargeRate = 5.00;
-  double _commissionRate = 1.25;
+  void _addQuickAmount(double value) {
+    HapticFeedback.lightImpact();
+    setState(() {
+      _numAmount += value;
+      _amountController.text = _numAmount.toStringAsFixed(2);
+    });
+  }
 
   Future<void> _showAddBeneficiarySheet() async {
     final result = await context.push('/add-beneficiary');
@@ -70,9 +95,12 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
 
   void _showSelectBeneficiarySheet() {
     final beneficiaries = ref.read(beneficiaryProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF1E2235) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return Padding(
@@ -81,29 +109,45 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Select Beneficiary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: beneficiaries.length,
-                  itemBuilder: (context, index) {
-                    final b = beneficiaries[index];
-                    return ListTile(
-                      leading: LetterAvatar(name: b['name'] ?? '', size: 40),
-                      title: Text(b['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                      subtitle: Text('${b['bank']} • ${b['account']}', style: const TextStyle(fontSize: 10)),
-                      onTap: () {
-                        setState(() {
-                          _selectedBeneficiaryData = b;
-                          _selectedBeneficiary = b['name']!;
-                        });
-                        Navigator.pop(context);
-                      },
-                    );
-                  },
-                ),
+              Text(
+                'Select Beneficiary',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                textAlign: TextAlign.center,
               ),
+              const SizedBox(height: 16),
+              if (beneficiaries.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Text('No saved beneficiaries found.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: beneficiaries.length,
+                    itemBuilder: (context, index) {
+                      final b = beneficiaries[index];
+                      return ListTile(
+                        leading: _buildLetterAvatar(b['name'] ?? ''),
+                        title: Text(
+                          b['name']!, 
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)
+                        ),
+                        subtitle: Text(
+                          '${b['bank']} • ${b['account']}', 
+                          style: const TextStyle(fontSize: 10, color: Colors.grey)
+                        ),
+                        onTap: () {
+                          setState(() {
+                            _selectedBeneficiaryData = Map<String, String>.from(b);
+                            _selectedBeneficiary = b['name']!;
+                          });
+                          Navigator.pop(context);
+                        },
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         );
@@ -111,37 +155,52 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
     );
   }
 
-  void _confirmTransfer() {
-    if (_amountController.text.isEmpty) {
+  Widget _buildLetterAvatar(String name) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'B';
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: const BoxDecoration(
+        color: Color(0xFF7C3AED),
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+    );
+  }
+
+  void _triggerPinValidation() {
+    if (_numAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount.')),
+        const SnackBar(content: Text('Please enter a valid transfer amount.'), backgroundColor: Colors.red),
       );
       return;
     }
 
-    final amount = double.tryParse(_amountController.text) ?? 0;
-    if (amount <= 0) {
+    if (_selectedBeneficiaryData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount.')),
+        const SnackBar(content: Text('Please select or add a beneficiary first.'), backgroundColor: Colors.red),
       );
       return;
     }
 
-    // Show secure Transaction PIN modal confirmation with custom numeric keypad
+    // Show the Transaction PIN verification bottom sheet
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
     String enteredPin = '';
     String validationError = '';
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            final isDark = Theme.of(context).brightness == Brightness.dark;
-            final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-
+          builder: (context, setModalState) {
             void handleKeyPress(String key) async {
               if (enteredPin.length < 6) {
                 HapticFeedback.mediumImpact();
@@ -155,7 +214,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                   final errorMsg = await ref.read(authProvider.notifier).verifyPin(enteredPin);
                   if (errorMsg == null) {
                     Navigator.pop(context); // Close bottom sheet
-                    _processPayout(amount);
+                    _processPayout(_numAmount);
                   } else {
                     HapticFeedback.vibrate();
                     setModalState(() {
@@ -178,7 +237,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
             }
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+              padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -191,9 +250,9 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Text('Enter Transaction PIN', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor), textAlign: TextAlign.center),
+                  Text('Enter Transaction PIN', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor), textAlign: TextAlign.center),
                   const SizedBox(height: 8),
-                  Text('Enter your 6-digit secure PIN to authorize transfer of ₹${amount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
+                  Text('Enter your 6-digit secure PIN to authorize transfer of ₹${_numAmount.toStringAsFixed(2)}', style: const TextStyle(fontSize: 11, color: Colors.grey), textAlign: TextAlign.center),
                   const SizedBox(height: 28),
 
                   // Pin visual indicators (6 circles)
@@ -203,7 +262,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                       final isFilled = index < enteredPin.length;
                       return AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
-                        margin: const EdgeInsets.symmetric(horizontal: 10),
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
                         width: 14,
                         height: 14,
                         decoration: BoxDecoration(
@@ -219,43 +278,36 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                     Text(validationError, style: const TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
                   const SizedBox(height: 28),
 
-                  // Grid Custom Keypad
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: ['1', '2', '3'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: ['4', '5', '6'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: ['7', '8', '9'].map((digit) => KeypadButton(label: digit, onTap: () => handleKeyPress(digit))).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            const SizedBox(width: 64, height: 64), // Empty space for layout balance
-                            KeypadButton(label: '0', onTap: () => handleKeyPress('0')),
-                            IconButton(
-                              icon: const Icon(Icons.backspace_outlined, size: 24, color: Colors.grey),
-                              onPressed: handleBackspace,
-                              style: IconButton.styleFrom(
-                                minimumSize: const Size(64, 64),
-                                shape: const CircleBorder(),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+                  // Tactile Keypad
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: ['1', '2', '3'].map((digit) => _buildTactileKey(digit, () => handleKeyPress(digit))).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: ['4', '5', '6'].map((digit) => _buildTactileKey(digit, () => handleKeyPress(digit))).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: ['7', '8', '9'].map((digit) => _buildTactileKey(digit, () => handleKeyPress(digit))).toList(),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          const SizedBox(width: 64, height: 60),
+                          _buildTactileKey('0', () => handleKeyPress('0')),
+                          IconButton(
+                            icon: const Text('⌫', style: TextStyle(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.bold)),
+                            onPressed: handleBackspace,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -263,6 +315,34 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
           },
         );
       },
+    );
+  }
+
+  Widget _buildTactileKey(String digit, VoidCallback onTap) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 64,
+          height: 60,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1E2235) : const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            digit,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : const Color(0xFF0F172A),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -316,302 +396,353 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final beneficiaries = ref.watch(beneficiaryProvider);
-    if (_selectedBeneficiaryData == null && beneficiaries.isNotEmpty) {
-      _selectedBeneficiaryData = beneficiaries.first;
-      _selectedBeneficiary = beneficiaries.first['name']!;
-    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final descColor = isDark ? Colors.white70 : Colors.black54;
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+    final borderStyleColor = isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('New Money Transfer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Beneficiary Selection card
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'New Money Transfer',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        centerTitle: true,
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Row(
               children: [
-                const Text('SELECT BENEFICIARY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                TextButton.icon(
-                  icon: const Icon(Icons.add, size: 14),
-                  label: const Text('Add New', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                  onPressed: _showAddBeneficiarySheet,
-                  style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                ),
+                Icon(Icons.shield_outlined, color: Colors.green, size: 14),
+                SizedBox(width: 4),
+                Text('Secure', style: TextStyle(color: Colors.green, fontSize: 10, fontWeight: FontWeight.bold)),
               ],
             ),
-            const SizedBox(height: 8),
-            if (_selectedBeneficiaryData != null)
-              Card(
-                child: ListTile(
-                  leading: LetterAvatar(name: _selectedBeneficiaryData!['name'] ?? '', size: 40),
-                  title: Text(_selectedBeneficiaryData!['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                  subtitle: Text('${_selectedBeneficiaryData!['bank']} • ${_selectedBeneficiaryData!['account']}', style: const TextStyle(fontSize: 11)),
-                  trailing: const Icon(Icons.arrow_drop_down),
-                  onTap: _showSelectBeneficiarySheet,
-                ),
-              )
-            else
-              Card(
-                child: ListTile(
-                  leading: const CircleAvatar(backgroundColor: Color(0xFFF3F4F6), child: Icon(Icons.person_add, color: Colors.grey)),
-                  title: const Text('No Beneficiary Selected', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.grey)),
-                  subtitle: const Text('Tap "Add New" above to configure', style: TextStyle(fontSize: 11)),
-                  onTap: _showAddBeneficiarySheet,
-                ),
-              ),
-            const SizedBox(height: 24),
+          )
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Static Stepper Bar
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStep(1, 'Details', true),
+                      _buildStepDivider(true),
+                      _buildStep(2, 'Review', false),
+                      _buildStepDivider(false),
+                      _buildStep(3, 'Confirm', false),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
 
-            // Amount input Card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('TRANSFER AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                      decoration: const InputDecoration(
-                        prefixText: '₹ ',
-                        hintText: '0.00',
-                        border: InputBorder.none,
+                  // 2. Select Beneficiary Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Beneficiary',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
                       ),
-                      onChanged: (value) {
-                        setState(() {});
-                      },
+                      TextButton(
+                        onPressed: _showAddBeneficiarySheet,
+                        style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: Size.zero, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                        child: const Text(
+                          '+ Add New',
+                          style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      )
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Selected Beneficiary Display Card
+                  if (_selectedBeneficiaryData != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: borderStyleColor),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                        leading: _buildLetterAvatar(_selectedBeneficiaryData!['name'] ?? ''),
+                        title: Row(
+                          children: [
+                            Text(
+                              _selectedBeneficiaryData!['name'] ?? '',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Text('Saved', style: TextStyle(color: Color(0xFF7C3AED), fontSize: 9, fontWeight: FontWeight.bold)),
+                            )
+                          ],
+                        ),
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${_selectedBeneficiaryData!['bank']}\nIFSC: ${_selectedBeneficiaryData!['ifsc']}',
+                            style: const TextStyle(fontSize: 10, color: Colors.grey, height: 1.3),
+                          ),
+                        ),
+                        trailing: Icon(Icons.keyboard_arrow_down, color: textColor),
+                        onTap: _showSelectBeneficiarySheet,
+                      ),
                     ),
-                  ],
-                ),
+                  const SizedBox(height: 12),
+
+                  // Verified Alert Box
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFF7C3AED).withOpacity(0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF7C3AED).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.verified_user_outlined, color: Color(0xFF7C3AED), size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Verified Beneficiary', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF7C3AED))),
+                              SizedBox(height: 2),
+                              Text('This beneficiary is verified and secure', style: TextStyle(fontSize: 9, color: Colors.grey)),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.check_circle, color: Colors.green, size: 16),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // 3. Transfer Amount Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Transfer Amount',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                      ),
+                      Text(
+                        'Available Balance: $_availableBalance',
+                        style: const TextStyle(color: Colors.grey, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Amount Card Input Layout
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: borderStyleColor),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text(
+                              '₹',
+                              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: _amountController,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
+                                decoration: const InputDecoration(
+                                  border: InputBorder.none,
+                                  isDense: true,
+                                ),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _numAmount = double.tryParse(val) ?? 0.00;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [100, 500, 1000, 5000].map((val) {
+                            return OutlinedButton(
+                              onPressed: () => _addQuickAmount(val.toDouble()),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: const Color(0xFF7C3AED).withOpacity(0.3)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              ),
+                              child: Text(
+                                '+ ₹$val',
+                                style: const TextStyle(fontSize: 10, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Fee-Free alert message bar
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.green.withOpacity(0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.verified, color: Colors.green, size: 16),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'No transaction fee on bank transfers',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ),
+                        Icon(Icons.chevron_right, color: Colors.green.withOpacity(0.5), size: 16),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+          ),
 
-            // Charges & Commission info block
-            if (_amountController.text.isNotEmpty)
-              Card(
-                color: const Color(0xFFF8FAFC),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
+          // Unified Sticky Footer Layout
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: BoxDecoration(
+              color: cardColor,
+              border: Border(top: BorderSide(color: borderStyleColor)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Transaction Payout Amount', style: TextStyle(fontSize: 11, color: Colors.black54)),
-                          Text('₹${_amountController.text}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
+                      const Text(
+                        'You are sending',
+                        style: TextStyle(color: Colors.grey, fontSize: 10),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Convenience Charges (+)', style: TextStyle(fontSize: 11, color: Colors.redAccent)),
-                          Text('₹$_chargeRate', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Commission Earned (-)', style: TextStyle(fontSize: 11, color: Colors.green)),
-                          Text('₹$_commissionRate', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                        ],
-                      ),
-                      const Divider(height: 24),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Net Wallet Debit', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          Text('₹${(double.tryParse(_amountController.text) ?? 0) + _chargeRate - _commissionRate}',
-                               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF4361EE))),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹${_numAmount.toStringAsFixed(2)}',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: textColor),
                       ),
                     ],
                   ),
                 ),
-              ),
-            const SizedBox(height: 36),
-
-            ElevatedButton(
-              onPressed: _confirmTransfer,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF4361EE),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Continue to PIN Validation', style: TextStyle(fontWeight: FontWeight.bold)),
+                ElevatedButton(
+                  onPressed: _triggerPinValidation,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Text('Continue to PIN Validation', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward, size: 14, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class KeypadButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const KeypadButton({
-    Key? key,
-    required this.label,
-    required this.onTap,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(40),
-      child: Container(
-        width: 68,
-        height: 68,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isDark ? const Color(0xFF1E2235) : Colors.grey.shade100,
-          border: Border.all(color: isDark ? const Color(0xFF2E3245) : Colors.grey.shade200),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: isDark ? Colors.white : const Color(0xFF1E293B),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class SafeBankLogo extends StatelessWidget {
-  final String? logoUrl;
-  final String bankName;
-  final double size;
-
-  const SafeBankLogo({
-    Key? key,
-    required this.logoUrl,
-    required this.bankName,
-    this.size = 48,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    if (logoUrl == null || logoUrl!.isEmpty) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: const BoxDecoration(
-          color: Color(0xFFEFF6FF),
-          shape: BoxShape.circle,
-        ),
-        child: const Center(
-          child: Icon(Icons.person, color: Color(0xFF4361EE), size: 20),
-        ),
-      );
-    }
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEFF6FF),
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: Image.network(
-          logoUrl!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) {
-            final uri = Uri.tryParse(logoUrl!);
-            final domain = uri != null && uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'generic-bank.com';
-            
-            return Image.network(
-              'https://logo.clearbit.com/$domain',
-              width: size,
-              height: size,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error2, stackTrace2) {
-                return const Center(
-                  child: Icon(Icons.business, color: Color(0xFF4361EE), size: 20),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class LetterAvatar extends StatelessWidget {
-  final String name;
-  final double size;
-
-  const LetterAvatar({
-    Key? key,
-    required this.name,
-    this.size = 40,
-  }) : super(key: key);
-
-  Color _getColorForName(String name) {
-    final colors = [
-      const Color(0xFFF43F5E), // Rose
-      const Color(0xFFEC4899), // Pink
-      const Color(0xFFD946EF), // Fuchsia
-      const Color(0xFF8B5CF6), // Violet
-      const Color(0xFF6366F1), // Indigo
-      const Color(0xFF3B82F6), // Blue
-      const Color(0xFF0EA5E9), // Sky
-      const Color(0xFF10B981), // Emerald
-      const Color(0xFFF59E0B), // Amber
-    ];
-    if (name.isEmpty) return colors[0];
-    final index = name.codeUnitAt(0) % colors.length;
-    return colors[index];
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
-    final bgColor = _getColorForName(name);
-
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: bgColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withOpacity(0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Center(
-        child: Text(
-          initial,
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: size * 0.45,
+    );
+  }
+
+  Widget _buildStep(int num, String title, bool isActive) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = const Color(0xFF7C3AED);
+    final inactiveColor = isDark ? Colors.white30 : Colors.grey.shade300;
+
+    return Row(
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: isActive ? activeColor : inactiveColor,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$num',
+            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: TextStyle(
+            color: isActive ? activeColor : (isDark ? Colors.white30 : Colors.grey),
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStepDivider(bool isActive) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        height: 1.5,
+        color: isActive ? const Color(0xFF7C3AED) : (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey.shade200),
       ),
     );
   }
