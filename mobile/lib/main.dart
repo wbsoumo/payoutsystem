@@ -48,7 +48,10 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/transfer',
-      builder: (BuildContext context, GoRouterState state) => const MoneyTransferScreen(),
+      builder: (BuildContext context, GoRouterState state) {
+        final ben = state.uri.queryParameters['beneficiary_name'];
+        return MoneyTransferScreen(initialBeneficiaryName: ben);
+      },
     ),
     GoRoute(
       path: '/receipt',

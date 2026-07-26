@@ -9,7 +9,8 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/endpoints.dart';
 
 class MoneyTransferScreen extends ConsumerStatefulWidget {
-  const MoneyTransferScreen({Key? key}) : super(key: key);
+  final String? initialBeneficiaryName;
+  const MoneyTransferScreen({Key? key, this.initialBeneficiaryName}) : super(key: key);
 
   @override
   ConsumerState<MoneyTransferScreen> createState() => _MoneyTransferScreenState();
@@ -18,6 +19,25 @@ class MoneyTransferScreen extends ConsumerStatefulWidget {
 class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   final _amountController = TextEditingController();
   final _pinController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.initialBeneficiaryName != null) {
+        final beneficiaries = ref.read(beneficiaryProvider);
+        for (final b in beneficiaries) {
+          if (b['name'] == widget.initialBeneficiaryName) {
+            setState(() {
+              _selectedBeneficiaryData = Map<String, String>.from(b);
+              _selectedBeneficiary = b['name']!;
+            });
+            break;
+          }
+        }
+      }
+    });
+  }
 
   final Map<String, String> _bankDomains = {
     'SBIN': 'sbi.co.in',

@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../beneficiaries/presentation/providers/beneficiary_provider.dart';
+import '../../../../core/constants/endpoints.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -15,11 +18,28 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _showBalance = true;
   String _balance = '₹0.00';
+  List<Map<String, dynamic>> _recentTransactions = [];
+  bool _isLoadingTx = true;
+
+  final Map<String, String> _bankDomains = {
+    'SBIN': 'sbi.co.in',
+    'HDFC': 'hdfcbank.com',
+    'ICIC': 'icicibank.com',
+    'UTIB': 'axisbank.com',
+    'BARB': 'bankofbaroda.in',
+    'PUNB': 'pnbindia.in',
+    'KKBK': 'kotak.com',
+    'YESB': 'yesbank.in',
+    'UBIN': 'unionbankofindia.co.in',
+    'CNRB': 'canarabank.com',
+    'IDIB': 'indianbank.in',
+  };
 
   @override
   void initState() {
     super.initState();
     _loadBalance();
+    _loadRecentTransactions();
   }
 
   Future<void> _loadBalance() async {
@@ -35,13 +55,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         }
       }
     } catch (e) {
-      // Keep ₹0.00
+      // Keep fallback
     }
+  }
+
+  Future<void> _loadRecentTransactions() async {
+    final client = ApiClient();
+    try {
+      final response = await client.dio.get('/payouts');
+      if (response.data['success'] == true) {
+        final List<dynamic> list = response.data['payouts'] ?? [];
+        if (mounted) {
+          setState(() {
+            _recentTransactions = list.take(3).map((t) => Map<String, dynamic>.from(t)).toList();
+            _isLoadingTx = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTx = false;
+        });
+      }
+    }
+  }
+
+  String _getLogoForIfsc(String? ifsc) {
+    if (ifsc == null || ifsc.length < 4) {
+      return '${Endpoints.baseUrl}/logo/generic-bank.com';
+    }
+    final prefix = ifsc.substring(0, 4).toUpperCase();
+    final domain = _bankDomains[prefix] ?? 'generic-bank.com';
+    return '${Endpoints.baseUrl}/logo/$domain';
   }
 
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
+    final beneficiaries = ref.watch(beneficiaryProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final bgColor = isDark ? const Color(0xFF0B0E1E) : const Color(0xFFF8FAFC);
@@ -72,7 +124,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Hi, ${user?.name ?? 'Alexa'}',
+                            'Hi, ${user?.name ?? 'Tony Stark'}',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
                           ),
                           const SizedBox(height: 2),
@@ -166,9 +218,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          'Stark Industries Ltd',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        Text(
+                          user?.companyName ?? 'Stark Industries Ltd',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11),
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -239,7 +291,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     // Add Button
                     GestureDetector(
-                      onTap: () => context.push('/beneficiaries'),
+                      onTap: () => context.push('/add-beneficiary'),
                       child: Padding(
                         padding: const EdgeInsets.only(right: 16),
                         child: Column(
@@ -259,23 +311,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ),
                     ),
-                    // Quick Send Beneficiaries
-                    const AvatarSendItem(
-                      name: 'Philip',
-                      imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80',
-                    ),
-                    const AvatarSendItem(
-                      name: 'Lissa',
-                      imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-                    ),
-                    const AvatarSendItem(
-                      name: 'Angel',
-                      imageUrl: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=100&q=80',
-                    ),
-                    const AvatarSendItem(
-                      name: 'Victoria',
-                      imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80',
-                    ),
+                    // Quick Send Beneficiaries mapped from provider
+                    ...beneficiaries.take(5).map((b) => AvatarSendItem(
+                      name: b['name']!.split(' ').first,
+                      logoUrl: b['logo'],
+                      bankName: b['bank'] ?? '',
+                      onTap: () => context.push('/transfer?beneficiary_name=${Uri.encodeComponent(b['name']!)}'),
+                    )),
                   ],
                 ),
               ),
@@ -297,71 +339,102 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
               const SizedBox(height: 12),
 
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: 2,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final titles = ['Lissa', 'Figma Subscription'];
-                  final subtitles = ['Today, 12:30 AM', 'Yesterday, 04:15 PM'];
-                  final amounts = ['₹150.00', '₹500.00'];
-                  final isSuccess = index == 0;
-                  final images = [
-                    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=100&q=80',
-                    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=100&q=80'
-                  ];
-
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+              if (_isLoadingTx)
+                Shimmer.fromColors(
+                  baseColor: isDark ? const Color(0xFF1E2235) : Colors.grey.shade300,
+                  highlightColor: isDark ? const Color(0xFF2E3245) : Colors.grey.shade100,
+                  child: Column(
+                    children: List.generate(
+                      2,
+                      (index) => Container(
+                        height: 72,
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+                      ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  ),
+                )
+              else if (_recentTransactions.isEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
                       children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundImage: NetworkImage(images[index]),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(titles[index], style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
-                                const SizedBox(height: 4),
-                                Text(subtitles[index], style: TextStyle(fontSize: 10, color: subTextColor)),
-                              ],
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              amounts[index],
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
-                            ),
-                            const SizedBox(width: 8),
-                            CircleAvatar(
-                              radius: 10,
-                              backgroundColor: isSuccess ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-                              child: Icon(
-                                isSuccess ? Icons.check : Icons.arrow_upward,
-                                color: isSuccess ? Colors.green : Colors.red,
-                                size: 10,
-                              ),
-                            ),
-                          ],
-                        ),
+                        Icon(Icons.payment_outlined, color: Colors.grey.shade400, size: 44),
+                        const SizedBox(height: 12),
+                        const Text('No recent transactions.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
                       ],
                     ),
-                  );
-                },
-              ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _recentTransactions.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final t = _recentTransactions[index];
+                    final isSuccess = t['status'] == 'success';
+                    final isPending = t['status'] == 'pending';
+
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              SafeBankLogo(
+                                logoUrl: _getLogoForIfsc(t['ifsc']),
+                                bankName: t['bank'] ?? '',
+                                size: 40,
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(t['beneficiary'] ?? 'N/A', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                                  const SizedBox(height: 4),
+                                  Text(t['date'] ?? 'N/A', style: TextStyle(fontSize: 10, color: subTextColor)),
+                                ],
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Text(
+                                t['amount'] ?? '₹0.00',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                              ),
+                              const SizedBox(width: 8),
+                              CircleAvatar(
+                                radius: 10,
+                                backgroundColor: isSuccess 
+                                    ? const Color(0xFFDCFCE7) 
+                                    : isPending ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
+                                child: Icon(
+                                  isSuccess 
+                                      ? Icons.check 
+                                      : isPending ? Icons.access_time : Icons.close,
+                                  color: isSuccess 
+                                      ? Colors.green 
+                                      : isPending ? Colors.amber.shade800 : Colors.red,
+                                  size: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               const SizedBox(height: 24),
             ],
           ),
@@ -409,46 +482,58 @@ class CircleActionItem extends StatelessWidget {
     required this.icon,
     required this.label,
     this.isPrimary = false,
-    this.isDark = true,
+    this.isDark = false,
     required this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = isPrimary
+        ? const Color(0xFF7C3AED)
+        : isDark
+            ? const Color(0xFF1E2235)
+            : Colors.white;
+    final iconColor = isPrimary
+        ? Colors.white
+        : isDark
+            ? Colors.white70
+            : const Color(0xFF475569);
+    final borderColor = isPrimary
+        ? Colors.transparent
+        : isDark
+            ? const Color(0xFF2E3245)
+            : const Color(0xFFE2E8F0);
+
     return GestureDetector(
       onTap: onTap,
       child: Column(
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
+              color: bgColor,
               shape: BoxShape.circle,
-              gradient: isPrimary
-                  ? const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF5B21B6)])
+              border: Border.all(color: borderColor),
+              boxShadow: isPrimary
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF7C3AED).withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
                   : null,
-              color: isPrimary
-                  ? null
-                  : isDark
-                      ? const Color(0xFF1E2235)
-                      : Colors.white,
-              border: isPrimary
-                  ? null
-                  : Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
             ),
-            child: Icon(
-              icon,
-              color: isPrimary ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-              size: 22,
-            ),
+            child: Icon(icon, color: iconColor, size: 22),
           ),
           const SizedBox(height: 8),
           Text(
             label,
             style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white70 : Colors.black87,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white70 : const Color(0xFF475569),
             ),
           ),
         ],
@@ -459,35 +544,108 @@ class CircleActionItem extends StatelessWidget {
 
 class AvatarSendItem extends StatelessWidget {
   final String name;
-  final String imageUrl;
+  final String? logoUrl;
+  final String bankName;
+  final VoidCallback onTap;
 
   const AvatarSendItem({
     Key? key,
     required this.name,
-    required this.imageUrl,
+    required this.logoUrl,
+    required this.bankName,
+    required this.onTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Padding(
-      padding: const EdgeInsets.only(right: 16),
-      child: Column(
-        children: [
-          CircleAvatar(
-            radius: 25,
-            backgroundImage: NetworkImage(imageUrl),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            name,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white70 : Colors.black87,
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 16),
+        child: Column(
+          children: [
+            SafeBankLogo(
+              logoUrl: logoUrl,
+              bankName: bankName,
+              size: 50,
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              name,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class SafeBankLogo extends StatelessWidget {
+  final String? logoUrl;
+  final String bankName;
+  final double size;
+
+  const SafeBankLogo({
+    Key? key,
+    required this.logoUrl,
+    required this.bankName,
+    this.size = 48,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    if (logoUrl == null || logoUrl!.isEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: const BoxDecoration(
+          color: Color(0xFFEFF6FF),
+          shape: BoxShape.circle,
+        ),
+        child: const Center(
+          child: Icon(Icons.business, color: Color(0xFF4361EE), size: 24),
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEFF6FF),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: Image.network(
+          logoUrl!,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            final uri = Uri.tryParse(logoUrl!);
+            final domain = uri != null && uri.pathSegments.isNotEmpty ? uri.pathSegments.last : 'generic-bank.com';
+            
+            return Image.network(
+              'https://logo.clearbit.com/$domain',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error2, stackTrace2) {
+                return const Center(
+                  child: Icon(Icons.business, color: Color(0xFF4361EE), size: 20),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
