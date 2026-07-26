@@ -65,7 +65,7 @@
                         @forelse($logs as $log)
                             <tr>
                                 <td class="px-4 py-4 font-mono font-bold text-slate-500">
-                                    <div class="text-slate-800 text-[11px]">{{ $log->uri }}</div>
+                                    <div class="text-slate-800 text-[11px]">{{ $log->endpoint }}</div>
                                     <div class="text-[9px] text-slate-400">Method: POST</div>
                                 </td>
                                 <td class="px-4 py-4 text-center font-mono font-bold text-slate-900">{{ $log->response_status ?? 200 }}</td>

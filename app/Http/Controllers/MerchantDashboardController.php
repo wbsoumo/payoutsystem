@@ -693,7 +693,7 @@ class MerchantDashboardController extends Controller
         $webhook = \App\Models\MerchantWebhook::where('merchant_id', $merchant->id)->first();
         
         $logs = \App\Models\ApiLog::where('merchant_id', $merchant->id)
-            ->where('uri', 'like', '%webhook%')
+            ->where('endpoint', 'like', '%webhook%')
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
