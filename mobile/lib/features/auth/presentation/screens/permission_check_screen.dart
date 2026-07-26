@@ -39,7 +39,7 @@ class _PermissionCheckScreenState extends State<PermissionCheckScreen> {
     }
 
     final locStatus = await Permission.location.status;
-    final storeStatus = await Permission.storage.status;
+    final storeStatus = await Permission.manageExternalStorage.status;
 
     setState(() {
       _locationGranted = locStatus.isGranted;
@@ -65,7 +65,7 @@ class _PermissionCheckScreenState extends State<PermissionCheckScreen> {
     }
 
     final locReq = await Permission.location.request();
-    final storeReq = await Permission.storage.request();
+    final storeReq = await Permission.manageExternalStorage.request();
 
     setState(() {
       _locationGranted = locReq.isGranted;
