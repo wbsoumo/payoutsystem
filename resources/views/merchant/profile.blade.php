@@ -110,18 +110,28 @@
                 <!-- Section: KYC PDF Document & Image Uploads -->
                 <div class="grid md:grid-cols-2 gap-6">
                     <div class="space-y-1">
-                        <label for="kyc_document" class="text-[10px] font-bold text-slate-500 uppercase block">KYC Proof (Business Registration / Incorporation PDF)</label>
-                        <input type="file" name="kyc_document" id="kyc_document"
-                               class="w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block">KYC Proof (Business Registration / Incorporation PDF)</label>
+                        <input type="file" name="kyc_document" id="kyc_document" class="hidden" onchange="document.getElementById('kyc_document_name').innerText = this.files[0] ? this.files[0].name : 'No file chosen'">
+                        <div class="flex items-center gap-3 mt-1">
+                            <button type="button" onclick="document.getElementById('kyc_document').click()" class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 font-bold rounded-xl text-xs transition-colors">
+                                Choose file
+                            </button>
+                            <span id="kyc_document_name" class="text-xs text-slate-500 font-medium">No file chosen</span>
+                        </div>
                         @if($profile->kyc_document_path)
                             <span class="text-[10px] text-slate-400 block mt-1"><i class="fa-solid fa-file-pdf text-red-500 mr-1"></i> Document Uploaded: <a href="{{ asset('storage/' . $profile->kyc_document_path) }}" target="_blank" class="text-blue-600 hover:underline font-bold">View Document</a></span>
                         @endif
                     </div>
 
                     <div class="space-y-1">
-                        <label for="profile_image" class="text-[10px] font-bold text-slate-500 uppercase block">Logo / Profile Image</label>
-                        <input type="file" name="profile_image" id="profile_image"
-                               class="w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase block">Logo / Profile Image</label>
+                        <input type="file" name="profile_image" id="profile_image" class="hidden" onchange="document.getElementById('profile_image_name').innerText = this.files[0] ? this.files[0].name : 'No file chosen'">
+                        <div class="flex items-center gap-3 mt-1">
+                            <button type="button" onclick="document.getElementById('profile_image').click()" class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 font-bold rounded-xl text-xs transition-colors">
+                                Choose file
+                            </button>
+                            <span id="profile_image_name" class="text-xs text-slate-500 font-medium">No file chosen</span>
+                        </div>
                         @if($profile->profile_image_path)
                             <span class="text-[10px] text-slate-400 block mt-1"><i class="fa-solid fa-image text-blue-500 mr-1"></i> Profile Image Uploaded</span>
                         @endif

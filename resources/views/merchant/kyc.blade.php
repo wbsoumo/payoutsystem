@@ -86,9 +86,14 @@
                 </div>
 
                 <div class="space-y-1">
-                    <label for="kyc_doc" class="text-[10px] font-bold text-slate-500 uppercase">KYC Document Upload (PAN/COI PDF, JPG or PNG)</label>
-                    <input type="file" name="kyc_doc" id="kyc_doc" required
-                           class="w-full text-xs text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block">KYC Document Upload (PAN/COI PDF, JPG or PNG)</label>
+                    <input type="file" name="kyc_doc" id="kyc_doc" required class="hidden" onchange="document.getElementById('kyc_doc_name').innerText = this.files[0] ? this.files[0].name : 'No file chosen'">
+                    <div class="flex items-center gap-3 mt-1">
+                        <button type="button" onclick="document.getElementById('kyc_doc').click()" class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-100 font-bold rounded-xl text-xs transition-colors">
+                            Choose file
+                        </button>
+                        <span id="kyc_doc_name" class="text-xs text-slate-500 font-medium">No file chosen</span>
+                    </div>
                 </div>
 
                 <button type="submit" class="px-6 h-11 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-xs shadow-lg shadow-blue-500/10 transition-colors">
