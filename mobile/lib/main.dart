@@ -14,6 +14,7 @@ import 'features/beneficiaries/presentation/screens/beneficiaries_screen.dart';
 import 'features/beneficiaries/presentation/screens/add_beneficiary_screen.dart';
 import 'features/ledger/presentation/screens/ledger_screen.dart';
 import 'features/transactions/presentation/screens/transactions_screen.dart';
+import 'features/transactions/presentation/screens/transaction_detail_screen.dart';
 import 'features/settings/presentation/screens/settings_screen.dart';
 
 void main() async {
@@ -82,6 +83,13 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/transactions',
       builder: (BuildContext context, GoRouterState state) => const TransactionsScreen(),
+    ),
+    GoRoute(
+      path: '/transaction-detail',
+      builder: (BuildContext context, GoRouterState state) {
+        final txn = state.extra as Map<String, dynamic>;
+        return TransactionDetailScreen(transaction: txn);
+      },
     ),
     GoRoute(
       path: '/settings',

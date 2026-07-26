@@ -522,59 +522,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     final isSuccess = t['status'] == 'success';
                     final isPending = t['status'] == 'pending';
 
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: cardColor,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              SafeBankLogo(
-                                logoUrl: _getLogoForIfsc(t['ifsc']),
-                                bankName: t['bank'] ?? '',
-                                size: 40,
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(t['beneficiary'] ?? 'N/A', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
-                                  const SizedBox(height: 4),
-                                  Text(t['date'] ?? 'N/A', style: TextStyle(fontSize: 10, color: subTextColor)),
-                                ],
-                              ),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              Text(
-                                t['amount'] ?? '₹0.00',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
-                              ),
-                              const SizedBox(width: 8),
-                              CircleAvatar(
-                                radius: 10,
-                                backgroundColor: isSuccess 
-                                    ? const Color(0xFFDCFCE7) 
-                                    : isPending ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
-                                child: Icon(
-                                  isSuccess 
-                                      ? Icons.check 
-                                      : isPending ? Icons.access_time : Icons.close,
-                                  color: isSuccess 
-                                      ? Colors.green 
-                                      : isPending ? Colors.amber.shade800 : Colors.red,
-                                  size: 10,
+                    return GestureDetector(
+                      onTap: () => context.push('/transaction-detail', extra: t),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                SafeBankLogo(
+                                  logoUrl: _getLogoForIfsc(t['ifsc']),
+                                  bankName: t['bank'] ?? '',
+                                  size: 40,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                                const SizedBox(width: 12),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(t['beneficiary'] ?? 'N/A', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)),
+                                    const SizedBox(height: 4),
+                                    Text(t['date'] ?? 'N/A', style: TextStyle(fontSize: 10, color: subTextColor)),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  t['amount'] ?? '₹0.00',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor),
+                                ),
+                                const SizedBox(width: 8),
+                                CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: isSuccess 
+                                      ? const Color(0xFFDCFCE7) 
+                                      : isPending ? const Color(0xFFFEF3C7) : const Color(0xFFFEE2E2),
+                                  child: Icon(
+                                    isSuccess 
+                                        ? Icons.check 
+                                        : isPending ? Icons.access_time : Icons.close,
+                                    color: isSuccess 
+                                        ? Colors.green 
+                                        : isPending ? Colors.amber.shade800 : Colors.red,
+                                    size: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },
