@@ -58,7 +58,7 @@ class ApiService
             return ['status' => false, 'code' => 401, 'message' => 'Invalid API Key', 'merchant_id' => null];
         }
 
-        if ($keyRecord->merchant_id !== $merchantId) {
+        if (trim(strtolower((string)$keyRecord->merchant_id)) !== trim(strtolower((string)$merchantId))) {
             return ['status' => false, 'code' => 401, 'message' => 'API Key does not match the provided Merchant ID', 'merchant_id' => null];
         }
 
