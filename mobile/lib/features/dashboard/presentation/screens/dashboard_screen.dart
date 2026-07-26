@@ -96,6 +96,180 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return '${Endpoints.baseUrl}/logo/$domain';
   }
 
+  void _showProfileDetailSheet(BuildContext context, String title, List<Widget> details) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+        return Container(
+          padding: const EdgeInsets.all(24),
+          color: isDark ? const Color(0xFF1E2235) : Colors.white,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
+                  IconButton(
+                    icon: Icon(Icons.close, color: textColor),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              ...details,
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showProfileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+        final subTextColor = isDark ? Colors.white60 : Colors.black54;
+
+        final items = [
+          {'title': '👤 My Profile', 'action': 'profile'},
+          {'title': '🏢 Business Details', 'action': 'business'},
+          {'title': '🏦 Bank Account', 'action': 'bank'},
+          {'title': '🔐 Security', 'action': 'security'},
+          {'title': '📍 Login History', 'action': 'login_history'},
+          {'title': '📞 Support', 'action': 'support'},
+          {'title': '📄 KYC Status', 'action': 'kyc'},
+          {'title': '⚙️ Settings', 'action': 'settings'},
+          {'title': '🚪 Logout', 'action': 'logout'},
+        ];
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          maxChildSize: 0.9,
+          minChildSize: 0.5,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              color: isDark ? const Color(0xFF1E2235) : Colors.white,
+              child: ListView(
+                controller: scrollController,
+                children: [
+                  // Profile Header inside Drawer
+                  Center(
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          radius: 36,
+                          backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Tony Stark',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'tony@stark.com',
+                          style: TextStyle(fontSize: 12, color: subTextColor),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 12),
+                  
+                  // Menu Items
+                  ...items.map((item) {
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 4),
+                      title: Text(
+                        item['title']!,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: textColor),
+                      ),
+                      trailing: Icon(Icons.chevron_right, size: 20, color: subTextColor),
+                      onTap: () {
+                        Navigator.pop(context); // Close profile menu
+                        final act = item['action'];
+                        
+                        if (act == 'profile') {
+                          _showProfileDetailSheet(context, 'My Profile', [
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Name'), subtitle: Text('Tony Stark', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Email'), subtitle: Text('tony@stark.com', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Role'), subtitle: Text('Owner / Primary Admin', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                          ]);
+                        } else if (act == 'business') {
+                          _showProfileDetailSheet(context, 'Business Details', [
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Company Name'), subtitle: Text('Stark Industries Ltd', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Type'), subtitle: Text('Private Limited', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('GSTIN'), subtitle: Text('27AAACS1234A1Z1', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Website'), subtitle: Text('https://starkindustries.com', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                          ]);
+                        } else if (act == 'bank') {
+                          _showProfileDetailSheet(context, 'Bank Account', [
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Settlement Account'), subtitle: Text('Stark Industries Operating A/C', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Bank Name'), subtitle: Text('State Bank of India', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Account Number'), subtitle: Text('•••• 5678', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('IFSC'), subtitle: Text('SBIN0001020', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                          ]);
+                        } else if (act == 'security') {
+                          context.push('/settings');
+                        } else if (act == 'login_history') {
+                          _showProfileDetailSheet(context, 'Recent Login History', [
+                            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.laptop, color: Colors.green), title: const Text('Chrome (MacOS) • Staging environment'), subtitle: Text('27 Jul, 01:25 • IP: 127.0.0.1', style: TextStyle(color: textColor))),
+                            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.laptop, color: Colors.grey), title: const Text('Chrome (MacOS) • Web portal'), subtitle: Text('26 Jul, 18:30 • IP: 127.0.0.1', style: TextStyle(color: textColor))),
+                          ]);
+                        } else if (act == 'support') {
+                          _showProfileDetailSheet(context, 'Support Desk', [
+                            const Text('Need assistance with your wallet payouts? Contact our merchant support center directly:'),
+                            const SizedBox(height: 12),
+                            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.email, color: Colors.blueAccent), title: const Text('Email Support'), subtitle: Text('support@novexapay.com', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                            ListTile(contentPadding: EdgeInsets.zero, leading: const Icon(Icons.phone, color: Colors.green), title: const Text('Merchant Helpline'), subtitle: Text('+91 1800-102-PAY', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                          ]);
+                        } else if (act == 'kyc') {
+                          _showProfileDetailSheet(context, 'KYC Status', [
+                            ListTile(
+                              contentPadding: EdgeInsets.zero, 
+                              title: const Text('Status'), 
+                              subtitle: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                    child: const Text('VERIFIED', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 10)),
+                                  ),
+                                ],
+                              )
+                            ),
+                            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Verification Documents'), subtitle: Text('GSTIN & Business PAN Checked', style: TextStyle(color: textColor, fontWeight: FontWeight.bold))),
+                          ]);
+                        } else if (act == 'settings') {
+                          context.push('/settings');
+                        } else if (act == 'logout') {
+                          context.go('/');
+                        }
+                      },
+                    );
+                  }).toList(),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showNotificationsDrawer(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -232,9 +406,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 children: [
                   Row(
                     children: [
-                      const CircleAvatar(
-                        radius: 22,
-                        backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),
+                      GestureDetector(
+                        onTap: () => _showProfileMenu(context),
+                        child: const CircleAvatar(
+                          radius: 22,
+                          backgroundImage: NetworkImage('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Column(
