@@ -16,7 +16,7 @@ class MoneyTransferScreen extends ConsumerStatefulWidget {
 }
 
 class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
-  final _amountController = TextEditingController(text: '0.00');
+  final _amountController = TextEditingController(text: '');
   Map<String, String>? _selectedBeneficiaryData;
   String _selectedBeneficiary = '';
   
@@ -97,59 +97,106 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
     final beneficiaries = ref.read(beneficiaryProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final cardColor = isDark ? const Color(0xFF2E3245) : const Color(0xFFF1F5F9);
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: isDark ? const Color(0xFF1E2235) : Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Select Beneficiary',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              if (beneficiaries.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 24),
-                  child: Text('No saved beneficiaries found.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
-                )
-              else
-                Expanded(
-                  child: ListView.builder(
-                    shrinkWrap: true,
-                    itemCount: beneficiaries.length,
-                    itemBuilder: (context, index) {
-                      final b = beneficiaries[index];
-                      return ListTile(
-                        leading: _buildLetterAvatar(b['name'] ?? ''),
-                        title: Text(
-                          b['name']!, 
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)
-                        ),
-                        subtitle: Text(
-                          '${b['bank']} • ${b['account']}', 
-                          style: const TextStyle(fontSize: 10, color: Colors.grey)
-                        ),
-                        onTap: () {
-                          setState(() {
-                            _selectedBeneficiaryData = Map<String, String>.from(b);
-                            _selectedBeneficiary = b['name']!;
-                          });
-                          Navigator.pop(context);
-                        },
-                      );
-                    },
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filtered = beneficiaries.where((b) {
+              final name = (b['name'] ?? '').toLowerCase();
+              final bank = (b['bank'] ?? '').toLowerCase();
+              final q = searchQuery.toLowerCase();
+              return name.contains(q) || bank.contains(q);
+            }).toList();
+
+            return Padding(
+              padding: EdgeInsets.fromLTRB(24, 20, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 48,
+                      height: 5,
+                      decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
-                ),
-            ],
-          ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Select Beneficiary',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Search Bar inside sheet
+                  Container(
+                    decoration: BoxDecoration(
+                      color: cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: TextField(
+                      style: TextStyle(color: textColor, fontSize: 12),
+                      decoration: InputDecoration(
+                        hintText: 'Search beneficiary name or bank...',
+                        hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
+                        prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 18),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (val) {
+                        setModalState(() {
+                          searchQuery = val;
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.4),
+                    child: filtered.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 32),
+                            child: Text('No beneficiaries match your search.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey, fontSize: 12)),
+                          )
+                        : ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final b = filtered[index];
+                              return ListTile(
+                                leading: _buildLetterAvatar(b['name'] ?? ''),
+                                title: Text(
+                                  b['name']!, 
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: textColor)
+                                ),
+                                subtitle: Text(
+                                  '${b['bank']} • ${b['account']}', 
+                                  style: const TextStyle(fontSize: 10, color: Colors.grey)
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedBeneficiaryData = Map<String, String>.from(b);
+                                    _selectedBeneficiary = b['name']!;
+                                  });
+                                  Navigator.pop(context);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );
@@ -398,7 +445,6 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-    final descColor = isDark ? Colors.white70 : Colors.black54;
     final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
     final borderStyleColor = isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0);
 
@@ -442,19 +488,6 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Static Stepper Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _buildStep(1, 'Details', true),
-                      _buildStepDivider(true),
-                      _buildStep(2, 'Review', false),
-                      _buildStepDivider(false),
-                      _buildStep(3, 'Confirm', false),
-                    ],
-                  ),
-                  const SizedBox(height: 32),
-
                   // 2. Select Beneficiary Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -594,6 +627,8 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                                 decoration: const InputDecoration(
                                   border: InputBorder.none,
                                   isDense: true,
+                                  hintText: '0.00',
+                                  hintStyle: TextStyle(color: Colors.grey),
                                 ),
                                 onChanged: (val) {
                                   setState(() {
@@ -700,49 +735,6 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildStep(int num, String title, bool isActive) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final activeColor = const Color(0xFF7C3AED);
-    final inactiveColor = isDark ? Colors.white30 : Colors.grey.shade300;
-
-    return Row(
-      children: [
-        Container(
-          width: 24,
-          height: 24,
-          decoration: BoxDecoration(
-            color: isActive ? activeColor : inactiveColor,
-            shape: BoxShape.circle,
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$num',
-            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-          ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          title,
-          style: TextStyle(
-            color: isActive ? activeColor : (isDark ? Colors.white30 : Colors.grey),
-            fontWeight: FontWeight.bold,
-            fontSize: 11,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStepDivider(bool isActive) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 8),
-        height: 1.5,
-        color: isActive ? const Color(0xFF7C3AED) : (Theme.of(context).brightness == Brightness.dark ? Colors.white10 : Colors.grey.shade200),
       ),
     );
   }
