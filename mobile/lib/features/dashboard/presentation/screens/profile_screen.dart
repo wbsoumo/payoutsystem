@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/network/api_client.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
-class _ProfileScreenState extends State<ProfileScreen> {
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Map<String, dynamic> _profile = {};
   bool _isLoading = true;
 
@@ -328,7 +330,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             } else if (act == 'settings') {
                               context.push('/settings');
                             } else if (act == 'logout') {
-                              context.go('/');
+                              ref.read(authProvider.notifier).logout();
+                              context.go('/login');
                             }
                           },
                         );

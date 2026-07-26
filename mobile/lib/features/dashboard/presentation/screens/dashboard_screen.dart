@@ -256,7 +256,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         } else if (act == 'settings') {
                           context.push('/settings');
                         } else if (act == 'logout') {
-                          context.go('/');
+                          ref.read(authProvider.notifier).logout();
+                          context.go('/login');
                         }
                       },
                     );
