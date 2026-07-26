@@ -11,17 +11,14 @@ require __DIR__.'/../vendor/autoload.php';
 
 /*
 |--------------------------------------------------------------------------
-| Bootstrap Laravel
+| Bootstrap Laravel Console Kernel
 |--------------------------------------------------------------------------
 */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
+$kernel->bootstrap(); // Boot service providers & configurations without handling HTTP routing
 
-// Force run migrations
 header('Content-Type: text/plain');
 echo "Novexapay cPanel Staging Migration Runner\n";
 echo "=========================================\n\n";
