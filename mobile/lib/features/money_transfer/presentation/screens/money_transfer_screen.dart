@@ -90,7 +90,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
                   itemBuilder: (context, index) {
                     final b = beneficiaries[index];
                     return ListTile(
-                      leading: SafeBankLogo(logoUrl: b['logo'], bankName: b['bank'] ?? ''),
+                      leading: LetterAvatar(name: b['name'] ?? '', size: 40),
                       title: Text(b['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       subtitle: Text('${b['bank']} • ${b['account']}', style: const TextStyle(fontSize: 10)),
                       onTap: () {
@@ -346,7 +346,7 @@ class _MoneyTransferScreenState extends ConsumerState<MoneyTransferScreen> {
             if (_selectedBeneficiaryData != null)
               Card(
                 child: ListTile(
-                  leading: SafeBankLogo(logoUrl: _selectedBeneficiaryData!['logo'], bankName: _selectedBeneficiaryData!['bank'] ?? ''),
+                  leading: LetterAvatar(name: _selectedBeneficiaryData!['name'] ?? '', size: 40),
                   title: Text(_selectedBeneficiaryData!['name']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                   subtitle: Text('${_selectedBeneficiaryData!['bank']} • ${_selectedBeneficiaryData!['account']}', style: const TextStyle(fontSize: 11)),
                   trailing: const Icon(Icons.arrow_drop_down),
@@ -551,6 +551,66 @@ class SafeBankLogo extends StatelessWidget {
               },
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class LetterAvatar extends StatelessWidget {
+  final String name;
+  final double size;
+
+  const LetterAvatar({
+    Key? key,
+    required this.name,
+    this.size = 40,
+  }) : super(key: key);
+
+  Color _getColorForName(String name) {
+    final colors = [
+      const Color(0xFFF43F5E), // Rose
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFFD946EF), // Fuchsia
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF0EA5E9), // Sky
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+    ];
+    if (name.isEmpty) return colors[0];
+    final index = name.codeUnitAt(0) % colors.length;
+    return colors[index];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final bgColor = _getColorForName(name);
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: bgColor,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: bgColor.withOpacity(0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: size * 0.45,
+          ),
         ),
       ),
     );

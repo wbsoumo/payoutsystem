@@ -704,19 +704,59 @@ class AvatarSendItem extends StatelessWidget {
     required this.onTap,
   }) : super(key: key);
 
+  Color _getColorForName(String name) {
+    final colors = [
+      const Color(0xFFF43F5E), // Rose
+      const Color(0xFFEC4899), // Pink
+      const Color(0xFFD946EF), // Fuchsia
+      const Color(0xFF8B5CF6), // Violet
+      const Color(0xFF6366F1), // Indigo
+      const Color(0xFF3B82F6), // Blue
+      const Color(0xFF0EA5E9), // Sky
+      const Color(0xFF10B981), // Emerald
+      const Color(0xFFF59E0B), // Amber
+    ];
+    if (name.isEmpty) return colors[0];
+    final index = name.codeUnitAt(0) % colors.length;
+    return colors[index];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final bgColor = _getColorForName(name);
+
     return GestureDetector(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.only(right: 16),
         child: Column(
           children: [
-            SafeBankLogo(
-              logoUrl: logoUrl,
-              bankName: bankName,
-              size: 50,
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: bgColor,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: bgColor.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
+                ),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
