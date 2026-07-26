@@ -7,166 +7,12 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({Key? key}) : super(key: key);
 
-  void _showChangePinDialog(BuildContext context, WidgetRef ref) {
-    final currentController = TextEditingController();
-    final newController = TextEditingController();
-    final confirmController = TextEditingController();
-    final formKey = GlobalKey<FormState>();
-    bool isLoading = false;
-    String? dialogError;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-              title: const Text('Change Transaction PIN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              content: Form(
-                key: formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Confirm your current 6-digit PIN and choose a secure new one.',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-                      if (dialogError != null) ...[
-                        Text(
-                          dialogError!,
-                          style: const TextStyle(color: Colors.red, fontSize: 11, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      // Current PIN
-                      TextFormField(
-                        controller: currentController,
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        style: TextStyle(color: textColor),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: InputDecoration(
-                          labelText: 'Current PIN',
-                          counterText: '',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.length != 6) {
-                            return 'Enter 6 digits';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // New PIN
-                      TextFormField(
-                        controller: newController,
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        style: TextStyle(color: textColor),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: InputDecoration(
-                          labelText: 'New PIN',
-                          counterText: '',
-                          prefixIcon: const Icon(Icons.vpn_key_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        validator: (val) {
-                          if (val == null || val.length != 6) {
-                            return 'Enter 6 digits';
-                          }
-                          if (val == currentController.text) {
-                            return 'Must be different';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      // Confirm New PIN
-                      TextFormField(
-                        controller: confirmController,
-                        obscureText: true,
-                        keyboardType: TextInputType.number,
-                        maxLength: 6,
-                        style: TextStyle(color: textColor),
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        decoration: InputDecoration(
-                          labelText: 'Confirm New PIN',
-                          counterText: '',
-                          prefixIcon: const Icon(Icons.done_all_outlined),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        validator: (val) {
-                          if (val != newController.text) {
-                            return 'PINs do not match';
-                          }
-                          return null;
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              actions: [
-                TextButton(
-                  onPressed: isLoading ? null : () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          if (formKey.currentState!.validate()) {
-                            setDialogState(() {
-                              isLoading = true;
-                              dialogError = null;
-                            });
-
-                            final error = await ref
-                                .read(authProvider.notifier)
-                                .changePin(currentController.text, newController.text);
-
-                            if (error == null) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Transaction PIN updated successfully!'),
-                                  backgroundColor: Colors.green,
-                                ),
-                              );
-                            } else {
-                              setDialogState(() {
-                                isLoading = false;
-                                dialogError = error;
-                              });
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF7C3AED),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: isLoading
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('Change PIN'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+  void _navigateToPage(BuildContext context, String title, Widget child) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => _FullPageWrapper(title: title, child: child),
+      ),
     );
   }
 
@@ -174,49 +20,621 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final isDark = themeMode == ThemeMode.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    final List<Map<String, dynamic>> settingsItems = [
+      {
+        'title': 'Account Settings',
+        'icon': Icons.person_outline,
+        'page': const _AccountSettingsPage(),
+      },
+      {
+        'title': 'Change Password',
+        'icon': Icons.lock_open_outlined,
+        'page': const _ChangePasswordPage(),
+      },
+      {
+        'title': 'Change Transaction PIN',
+        'icon': Icons.pin_outlined,
+        'page': const _ChangePinPage(),
+      },
+      {
+        'title': 'Biometric Login',
+        'icon': Icons.fingerprint_outlined,
+        'page': const _BiometricLoginPage(),
+      },
+      {
+        'title': 'Notifications',
+        'icon': Icons.notifications_none_outlined,
+        'page': const _NotificationsSettingsPage(),
+      },
+      {
+        'title': 'Appearance (Light/Dark)',
+        'icon': Icons.palette_outlined,
+        'page': const _AppearanceSettingsPage(),
+      },
+      {
+        'title': 'Language',
+        'icon': Icons.translate_outlined,
+        'page': const _LanguageSettingsPage(),
+      },
+      {
+        'title': 'Privacy & Security',
+        'icon': Icons.shield_outlined,
+        'page': const _PrivacySecurityPage(),
+      },
+      {
+        'title': 'Terms & Privacy Policy',
+        'icon': Icons.description_outlined,
+        'page': const _TermsPrivacyPage(),
+      },
+      {
+        'title': 'About App',
+        'icon': Icons.info_outline,
+        'page': const _AboutAppPage(),
+      },
+    ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('System Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Text('SECURITY SETTINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('Enable Biometric Login', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  subtitle: const Text('Use Fingerprint or Face ID to unlock', style: TextStyle(fontSize: 10)),
-                  value: true,
-                  onChanged: (val) {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  title: const Text('Change Transaction PIN', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 14),
-                  onTap: () => _showChangePinDialog(context, ref),
-                ),
-              ],
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Settings',
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        centerTitle: true,
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.all(24),
+        itemCount: settingsItems.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final item = settingsItems[index];
+          return Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
             ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF7C3AED).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  item['icon'] as IconData,
+                  color: const Color(0xFF7C3AED),
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                item['title'] as String,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  color: textColor,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: isDark ? Colors.white30 : Colors.grey.shade400,
+              ),
+              onTap: () => _navigateToPage(context, item['title'] as String, item['page'] as Widget),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Reusable Page Wrapper
+class _FullPageWrapper extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const _FullPageWrapper({
+    Key? key,
+    required this.title,
+    required this.child,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: textColor),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        centerTitle: true,
+      ),
+      body: SafeArea(child: child),
+    );
+  }
+}
+
+// 1. Account Settings Page
+class _AccountSettingsPage extends StatelessWidget {
+  const _AccountSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: TextEditingController(text: 'Tony Stark'),
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: TextEditingController(text: 'tony@stark.com'),
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'Email Address', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: TextEditingController(text: '+91 9876543210'),
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'Phone Number', border: OutlineInputBorder()),
           ),
           const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+            child: const Text('Update Profile', style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+}
 
-          const Text('THEMING & DISPLAY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('Dark Mode Display', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  value: isDark,
-                  onChanged: (val) {
-                    ref.read(themeProvider.notifier).toggleTheme(val);
-                  },
-                ),
-              ],
-            ),
+// 2. Change Password Page
+class _ChangePasswordPage extends StatelessWidget {
+  const _ChangePasswordPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            obscureText: true,
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'Current Password', border: OutlineInputBorder()),
           ),
+          const SizedBox(height: 16),
+          TextField(
+            obscureText: true,
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'New Password', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            obscureText: true,
+            style: TextStyle(color: textColor),
+            decoration: const InputDecoration(labelText: 'Confirm Password', border: OutlineInputBorder()),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+            child: const Text('Change Password', style: TextStyle(color: Colors.white)),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// 3. Change Transaction PIN Page
+class _ChangePinPage extends ConsumerStatefulWidget {
+  const _ChangePinPage({Key? key}) : super(key: key);
+
+  @override
+  ConsumerState<_ChangePinPage> createState() => _ChangePinPageState();
+}
+
+class _ChangePinPageState extends ConsumerState<_ChangePinPage> {
+  final _currentController = TextEditingController();
+  final _newController = TextEditingController();
+  final _confirmController = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null) ...[
+              Text(_error!, style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+            ],
+            TextFormField(
+              controller: _currentController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: TextStyle(color: textColor),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'Current PIN', border: OutlineInputBorder()),
+              validator: (val) => (val?.length != 6) ? 'Enter 6 digits' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _newController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: TextStyle(color: textColor),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'New PIN', border: OutlineInputBorder()),
+              validator: (val) => (val?.length != 6) ? 'Enter 6 digits' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _confirmController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              style: TextStyle(color: textColor),
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: const InputDecoration(labelText: 'Confirm New PIN', border: OutlineInputBorder()),
+              validator: (val) => (val != _newController.text) ? 'PINs do not match' : null,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      if (_formKey.currentState!.validate()) {
+                        setState(() {
+                          _isLoading = true;
+                          _error = null;
+                        });
+                        final err = await ref
+                            .read(authProvider.notifier)
+                            .changePin(_currentController.text, _newController.text);
+                        if (mounted) {
+                          setState(() {
+                            _isLoading = false;
+                          });
+                          if (err == null) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Transaction PIN updated successfully!'), backgroundColor: Colors.green),
+                            );
+                          } else {
+                            setState(() {
+                              _error = err;
+                            });
+                          }
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF7C3AED)),
+              child: _isLoading
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text('Change PIN', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 4. Biometric Login Page
+class _BiometricLoginPage extends StatefulWidget {
+  const _BiometricLoginPage({Key? key}) : super(key: key);
+
+  @override
+  State<_BiometricLoginPage> createState() => _BiometricLoginPageState();
+}
+
+class _BiometricLoginPageState extends State<_BiometricLoginPage> {
+  bool _biometricEnabled = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: SwitchListTile(
+              title: const Text('Fingerprint / Face ID Login', style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text('Access your wallet instantly using biometrics'),
+              value: _biometricEnabled,
+              onChanged: (val) {
+                setState(() {
+                  _biometricEnabled = val;
+                });
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// 5. Notifications Settings Page
+class _NotificationsSettingsPage extends StatefulWidget {
+  const _NotificationsSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  State<_NotificationsSettingsPage> createState() => _NotificationsSettingsPageState();
+}
+
+class _NotificationsSettingsPageState extends State<_NotificationsSettingsPage> {
+  bool _email = true;
+  bool _push = true;
+  bool _sms = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        Container(
+          decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+          child: Column(
+            children: [
+              SwitchListTile(
+                title: const Text('Email Alerts'),
+                value: _email,
+                onChanged: (val) => setState(() => _email = val),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                title: const Text('Push Notifications'),
+                value: _push,
+                onChanged: (val) => setState(() => _push = val),
+              ),
+              const Divider(height: 1),
+              SwitchListTile(
+                title: const Text('SMS Transactions'),
+                value: _sms,
+                onChanged: (val) => setState(() => _sms = val),
+              ),
+            ],
+          ),
+        )
+      ],
+    );
+  }
+}
+
+// 6. Appearance Settings Page
+class _AppearanceSettingsPage extends ConsumerWidget {
+  const _AppearanceSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(themeProvider);
+    final isDark = themeMode == ThemeMode.dark;
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Container(
+        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<ThemeMode>(
+              title: const Text('Light Mode'),
+              value: ThemeMode.light,
+              groupValue: themeMode,
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(themeProvider.notifier).toggleTheme(false);
+                }
+              },
+            ),
+            const Divider(height: 1),
+            RadioListTile<ThemeMode>(
+              title: const Text('Dark Mode'),
+              value: ThemeMode.dark,
+              groupValue: themeMode,
+              onChanged: (val) {
+                if (val != null) {
+                  ref.read(themeProvider.notifier).toggleTheme(true);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 7. Language Settings Page
+class _LanguageSettingsPage extends StatefulWidget {
+  const _LanguageSettingsPage({Key? key}) : super(key: key);
+
+  @override
+  State<_LanguageSettingsPage> createState() => _LanguageSettingsPageState();
+}
+
+class _LanguageSettingsPageState extends State<_LanguageSettingsPage> {
+  String _lang = 'en';
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardColor = isDark ? const Color(0xFF1E2235) : Colors.white;
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Container(
+        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20)),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('English'),
+              value: 'en',
+              groupValue: _lang,
+              onChanged: (val) => setState(() => _lang = val!),
+            ),
+            const Divider(height: 1),
+            RadioListTile<String>(
+              title: const Text('हिंदी (Hindi)'),
+              value: 'hi',
+              groupValue: _lang,
+              onChanged: (val) => setState(() => _lang = val!),
+            ),
+            const Divider(height: 1),
+            RadioListTile<String>(
+              title: const Text('বাংলা (Bengali)'),
+              value: 'bn',
+              groupValue: _lang,
+              onChanged: (val) => setState(() => _lang = val!),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// 8. Privacy & Security Page
+class _PrivacySecurityPage extends StatelessWidget {
+  const _PrivacySecurityPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Data Protection & Security', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+          const SizedBox(height: 12),
+          Text(
+            'Novexapay secures all transactional interactions using state-of-the-art API signatures. Under no circumstances are raw transaction PINs or credentials stored in plain text. Multi-factor verification is enforced dynamically.',
+            style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12, height: 1.4),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+// 9. Terms & Privacy Policy Page
+class _TermsPrivacyPage extends StatelessWidget {
+  const _TermsPrivacyPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Terms of Service', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+          const SizedBox(height: 8),
+          Text(
+            'By using the Novexapay mobile merchant application, you agree to all merchant settlement rates, commissions, and API security guidelines. System abuse or unauthorized impersonation triggers immediate service limitation.',
+            style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12, height: 1.4),
+          ),
+          const SizedBox(height: 20),
+          Text('Privacy Policy', style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14)),
+          const SizedBox(height: 8),
+          Text(
+            'Your business metrics, bank details, and personal attributes are securely stored and encrypted. We do not sell merchant metrics or activity logs to third-party providers.',
+            style: TextStyle(color: isDark ? Colors.white60 : Colors.black54, fontSize: 12, height: 1.4),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// 10. About App Page
+class _AboutAppPage extends StatelessWidget {
+  const _AboutAppPage({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.shield_outlined, size: 72, color: const Color(0xFF7C3AED)),
+          const SizedBox(height: 16),
+          Text('Novexapay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: textColor)),
+          const SizedBox(height: 4),
+          const Text('Merchant Management Portal', style: TextStyle(fontSize: 12, color: Colors.grey)),
+          const SizedBox(height: 12),
+          const Text('Version v1.2.4', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+          const SizedBox(height: 4),
+          const Text('© 2026 Novexapay Inc.', style: TextStyle(fontSize: 10, color: Colors.grey)),
         ],
       ),
     );
