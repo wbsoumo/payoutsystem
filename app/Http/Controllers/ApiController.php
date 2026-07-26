@@ -240,10 +240,6 @@ class ApiController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        if ($merchant->transaction_pin) {
-            return response()->json(['success' => false, 'error' => 'Transaction PIN is already configured.'], 400);
-        }
-
         $merchant->update([
             'transaction_pin' => Hash::make($request->pin),
             'pin_failed_attempts' => 0,
