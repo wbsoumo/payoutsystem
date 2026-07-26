@@ -18,6 +18,7 @@ class DashboardScreen extends ConsumerStatefulWidget {
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _showBalance = true;
   String _balance = '₹0.00';
+  bool _isLoadingBalance = true;
   List<Map<String, dynamic>> _recentTransactions = [];
   bool _isLoadingTx = true;
 
@@ -51,11 +52,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         if (mounted) {
           setState(() {
             _balance = '₹' + bal.toStringAsFixed(2);
+            _isLoadingBalance = false;
           });
         }
       }
     } catch (e) {
-      // Keep fallback
+      if (mounted) {
+        setState(() {
+          _isLoadingBalance = false;
+        });
+      }
     }
   }
 
@@ -90,6 +96,109 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return '${Endpoints.baseUrl}/logo/$domain';
   }
 
+  void _showNotificationsDrawer(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final textColor = isDark ? Colors.white : const Color(0xFF1E293B);
+
+        final List<Map<String, String>> mockNotifications = [
+          {
+            'title': 'Payout Processed Successfully',
+            'body': 'Your payout request to Soumojit Saha for ₹100.00 was dispatched.',
+            'time': 'Just now',
+            'type': 'success'
+          },
+          {
+            'title': 'Wallet Security Alert',
+            'body': 'Merchant session validated on staging Chrome environment.',
+            'time': '10 mins ago',
+            'type': 'security'
+          },
+          {
+            'title': 'Stating Server Synced',
+            'body': 'Staging cPanel server and routing caches cleared successfully.',
+            'time': '1 hour ago',
+            'type': 'info'
+          },
+          {
+            'title': 'IFSC Lookup Success',
+            'body': 'Razorpay open IFSC resolver API verified successfully.',
+            'time': '2 hours ago',
+            'type': 'success'
+          }
+        ];
+
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('System Notifications', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Mark all read', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.blueAccent)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: mockNotifications.length,
+                  separatorBuilder: (c, i) => const Divider(height: 20),
+                  itemBuilder: (context, index) {
+                    final item = mockNotifications[index];
+                    IconData icon = Icons.info_outline;
+                    Color iconColor = Colors.blue;
+
+                    if (item['type'] == 'success') {
+                      icon = Icons.check_circle_outline;
+                      iconColor = Colors.green;
+                    } else if (item['type'] == 'security') {
+                      icon = Icons.security_outlined;
+                      iconColor = Colors.orange;
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundColor: iconColor.withOpacity(0.12),
+                          child: Icon(icon, color: iconColor, size: 18),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(item['title']!, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: textColor)),
+                              const SizedBox(height: 4),
+                              Text(item['body']!, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+                              const SizedBox(height: 6),
+                              Text(item['time']!, style: const TextStyle(fontSize: 8, color: Colors.grey, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
@@ -104,9 +213,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await Future.wait([
+              _loadBalance(),
+              _loadRecentTransactions(),
+            ]);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // 1. Top Bar Profile Info
@@ -137,38 +254,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ],
                   ),
                   // Notification bell
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF1E2235) : Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(Icons.notifications_none_outlined, color: textColor, size: 20),
-                        Positioned(
-                          top: 12,
-                          right: 12,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.redAccent,
-                              shape: BoxShape.circle,
+                  GestureDetector(
+                    onTap: () => _showNotificationsDrawer(context),
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF1E2235) : Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: isDark ? const Color(0xFF2E3245) : const Color(0xFFE2E8F0)),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Icon(Icons.notifications_none_outlined, color: textColor, size: 20),
+                          Positioned(
+                            top: 12,
+                            right: 12,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.redAccent,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // 2. Linear Gradient Wallet Card
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -186,54 +305,75 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ],
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Total Balance',
-                      style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _showBalance ? _balance : '•••••••',
-                          style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                child: _isLoadingBalance
+                    ? Shimmer.fromColors(
+                        baseColor: Colors.white.withOpacity(0.15),
+                        highlightColor: Colors.white.withOpacity(0.35),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(width: 80, height: 10, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                            const SizedBox(height: 12),
+                            Container(width: 160, height: 32, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6))),
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Container(width: 110, height: 10, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
+                                Container(width: 50, height: 16, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6))),
+                              ],
+                            )
+                          ],
                         ),
-                        IconButton(
-                          icon: Icon(
-                            _showBalance ? Icons.visibility : Icons.visibility_off,
-                            color: Colors.white70,
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Balance',
+                            style: TextStyle(color: Colors.white70, fontSize: 11, fontWeight: FontWeight.w500),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _showBalance = !_showBalance;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          user?.companyName ?? 'Stark Industries Ltd',
-                          style: const TextStyle(color: Colors.white70, fontSize: 11),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white24,
-                            borderRadius: BorderRadius.circular(8),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _showBalance ? _balance : '•••••••',
+                                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  _showBalance ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _showBalance = !_showBalance;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          child: const Text('ACTIVE', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                user?.companyName ?? 'Stark Industries Ltd',
+                                style: const TextStyle(color: Colors.white70, fontSize: 11),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.white24,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text('ACTIVE', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
               ),
               const SizedBox(height: 24),
 
@@ -440,6 +580,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ),
+    ),
       bottomNavigationBar: Container(
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 24),
         padding: const EdgeInsets.symmetric(vertical: 8),

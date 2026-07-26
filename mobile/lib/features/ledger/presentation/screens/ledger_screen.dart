@@ -77,9 +77,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ),
               ),
             )
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
+          : RefreshIndicator(
+              onRefresh: _loadLedgerLogs,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(24),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Opening/Closing summary card
@@ -166,6 +169,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ],
               ),
             ),
+          ),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_provider.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/auth/presentation/screens/splash_screen.dart';
 import 'features/auth/presentation/screens/pin_setup_screen.dart';
 import 'features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'features/money_transfer/presentation/screens/money_transfer_screen.dart';
@@ -32,8 +33,12 @@ void main() async {
 }
 
 final GoRouter _router = GoRouter(
-  initialLocation: '/login',
+  initialLocation: '/splash',
   routes: <RouteBase>[
+    GoRoute(
+      path: '/splash',
+      builder: (BuildContext context, GoRouterState state) => const SplashScreen(),
+    ),
     GoRoute(
       path: '/login',
       builder: (BuildContext context, GoRouterState state) => const LoginScreen(),
